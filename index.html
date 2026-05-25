@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cube Shoot!</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mainMenu" class="menu">
+        <h1>Cube Shoot!</h1>
+
+        <button id="openStartMenuButton">开始游戏</button>
+        <button id="openJoinMenuButton">加入房间</button>
+        <button id="settingsButton">设置</button>
+
+        <p id="menuStatus"></p>
+    </div>
+
+    <div id="startGameMenu" class="menu hidden">
+        <h1>开始游戏</h1>
+
+        <button id="openSinglePlayerMenuButton">单人游戏</button>
+        <button id="openCreateRoomMenuButton">创建多人游戏</button>
+        <button id="backFromStartMenuButton">返回</button>
+    </div>
+
+    <div id="singlePlayerMenu" class="menu hidden">
+        <h1>单人游戏</h1>
+
+        <label>
+            地图
+            <select id="singleMapSelect">
+                <option value="default">默认地图</option>
+                <option value="upload">上传地图</option>
+            </select>
+        </label>
+
+        <input id="singleMapInput" type="file" accept=".json,application/json" hidden />
+
+        <button id="chooseSingleMapFileButton" class="hidden">选择地图文件</button>
+        <p id="singleMapStatus" class="small-text">当前：默认地图</p>
+
+        <button id="startSinglePlayerButton">开始</button>
+        <button id="backFromSingleMenuButton">返回</button>
+    </div>
+
+    <div id="createRoomMenu" class="menu hidden">
+        <h1>创建多人游戏</h1>
+
+        <label>
+            玩家名称
+            <input id="createPlayerNameInput" type="text" placeholder="Player" autocomplete="off" />
+        </label>
+
+        <label>
+            地图
+            <select id="createMapSelect">
+                <option value="default">默认地图</option>
+                <option value="upload">上传地图</option>
+            </select>
+        </label>
+
+        <input id="createMapInput" type="file" accept=".json,application/json" hidden />
+
+        <button id="chooseCreateMapFileButton" class="hidden">选择地图文件</button>
+        <p id="createMapStatus" class="small-text">当前：默认地图</p>
+
+        <button id="createRoomButton">创建房间并进入</button>
+        <button id="backFromCreateMenuButton">返回</button>
+    </div>
+
+    <div id="joinRoomMenu" class="menu hidden">
+        <h1>加入房间</h1>
+
+        <label>
+            房间号
+            <input id="joinRoomInput" type="text" placeholder="Room ID" autocomplete="off" />
+        </label>
+
+        <label>
+            玩家名称
+            <input id="joinPlayerNameInput" type="text" placeholder="Player" autocomplete="off" />
+        </label>
+
+        <button id="joinRoomButton">进入房间</button>
+        <button id="backFromJoinMenuButton">返回</button>
+
+        <p id="joinRoomStatus"></p>
+    </div>
+
+    <div id="roomInfoPanel" class="room-info hidden">
+        <span>房间号：</span>
+        <strong id="roomCodeText"></strong>
+        <button id="copyRoomCodeButton">复制</button>
+    </div>
+
+    <div id="settingsPanel" class="menu hidden">
+        <h1>Settings</h1>
+
+        <label>
+            Season / Background
+            <select id="settingsSeasonSelect">
+                <option value="spring">Spring</option>
+                <option value="summer">Summer</option>
+                <option value="autumn">Autumn</option>
+                <option value="winter">Winter</option>
+            </select>
+        </label>
+
+        <div class="settings-grid">
+            <button class="keybindButton" data-action="left">Move Left</button>
+            <button class="keybindButton" data-action="right">Move Right</button>
+            <button class="keybindButton" data-action="jump">Jump</button>
+            <button class="keybindButton" data-action="fire">Fire</button>
+            <button class="keybindButton" data-action="chat">Chat</button>
+            <button class="keybindButton" data-action="freeCamera">Free Camera</button>
+            <button class="keybindButton" data-action="weapon1">Weapon 1</button>
+            <button class="keybindButton" data-action="weapon2">Weapon 2</button>
+        </div>
+
+        <label class="checkbox-row">
+            <input id="showHitboxesCheckbox" type="checkbox" />
+            Show hitboxes
+        </label>
+
+        <button id="resetSettingsButton">Reset Settings</button>
+        <button id="closeSettingsButton">Back</button>
+
+        <p id="settingsStatus"></p>
+    </div>
+
+    <div id="escapeMenu" class="escape-menu hidden">
+        <div class="escape-topbar">
+            <button class="escape-tab active" data-tab="game">游戏</button>
+            <button class="escape-tab" data-tab="spectate">旁观</button>
+            <button class="escape-tab" data-tab="players">玩家</button>
+
+            <div class="escape-spacer"></div>
+
+            <button id="escapeSettingsButton" class="escape-icon-button" title="Settings">⚙</button>
+            <button id="escapeExitButton" class="escape-icon-button" title="Exit Game">⏻</button>
+        </div>
+
+        <div class="escape-content">
+            <section id="escapeGamePage" class="escape-page">
+                <h2>游戏</h2>
+                <p>游戏已暂停。</p>
+
+                <div class="escape-button-row">
+                    <button id="escapeResumeButton">继续游戏</button>
+                    <button id="escapeBackToMenuButton">退出游戏</button>
+                </div>
+            </section>
+
+            <section id="escapeSpectatePage" class="escape-page hidden">
+                <h2>旁观</h2>
+                <p>死亡后会自动旁观场上剩余玩家。多人游戏中可用 Tab 切换视角。</p>
+
+                <div class="escape-button-row">
+                    <button id="escapeSpectateButton">进入旁观</button>
+                </div>
+            </section>
+
+            <section id="escapePlayersPage" class="escape-page hidden">
+                <h2>玩家</h2>
+                <div id="escapePlayerList" class="player-list"></div>
+            </section>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
