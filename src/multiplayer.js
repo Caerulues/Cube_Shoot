@@ -1,5 +1,14 @@
-const ROOM_STORAGE_PREFIX = "cubeShoot.room.";
 const PLAYER_TIMEOUT = 6000;
+const DEFAULT_WS_PORT = 8080;
+
+function getDefaultWebSocketUrl() {
+    if (window.CUBE_SHOOT_WS_URL) {
+        return window.CUBE_SHOOT_WS_URL;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.hostname || "localhost"}:${DEFAULT_WS_PORT}`;
+}
 
 function createId(prefix = "player") {
     return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
@@ -14,35 +23,41 @@ function clone(value) {
 }
 
 export class MultiplayerClient {
-    constructor({ roomId, playerName, isHost = false, mapData = null }) {
+    constructor({
+        roomId,
+        playerName,
+        isHost = false,
+        mapData = null,
+        wsUrl = getDefaultWebSocketUrl(),
+        onReady = null,
+        onError = null,
+        onClose = null
+    }) {
         this.roomId = String(roomId).trim();
         this.playerId = createId("player");
         this.playerName = playerName?.trim() || "Player";
         this.isHost = isHost;
-
-        this.channelName = `cubeShoot.room.${this.roomId}`;
-        this.channel = new BroadcastChannel(this.channelName);
+        this.wsUrl = wsUrl;
 
         this.players = new Map();
         this.pendingEvents = [];
         this.deathOrder = [];
         this.closed = false;
+        this.ready = false;
+        this.mapData = mapData ? clone(mapData) : null;
 
-        this.mapData = mapData ? clone(mapData) : this.loadRoomMap();
-
-        if (this.isHost && this.mapData) {
-            this.saveRoomMap(this.mapData);
-        }
-
-        this.channel.addEventListener("message", (event) => {
-            this.handleMessage(event.data);
-        });
+        this.onReady = onReady;
+        this.onError = onError;
+        this.onClose = onClose;
 
         this.upsertPlayer({
             id: this.playerId,
             name: this.playerName,
             x: 0,
             y: 0,
+            vx: 0,
+            vy: 0,
+            facing: 1,
             hp: 100,
             alive: true,
             kills: 0,
@@ -50,19 +65,58 @@ export class MultiplayerClient {
             lastSeen: performance.now()
         });
 
-        this.broadcast({
-            type: "hello",
-            player: this.getLocalPlayer(),
-            mapData: this.isHost ? this.mapData : null,
-            deathOrder: this.deathOrder
+        this.socket = new WebSocket(this.wsUrl);
+
+        this.socket.addEventListener("open", () => {
+            if (this.isHost) {
+                this.sendRaw({
+                    type: "createRoom",
+                    roomId: this.roomId,
+                    senderId: this.playerId,
+                    player: this.getLocalPlayer(),
+                    mapData: this.mapData
+                });
+            } else {
+                this.sendRaw({
+                    type: "joinRoom",
+                    roomId: this.roomId,
+                    senderId: this.playerId,
+                    player: this.getLocalPlayer()
+                });
+            }
+        });
+
+        this.socket.addEventListener("message", (event) => {
+            try {
+                this.handleMessage(JSON.parse(event.data));
+            } catch {
+                // Ignore invalid packets.
+            }
+        });
+
+        this.socket.addEventListener("close", () => {
+            const wasClosedManually = this.closed;
+            this.closed = true;
+            window.clearInterval(this.heartbeatTimer);
+
+            if (!wasClosedManually) {
+                this.onClose?.();
+            }
+        });
+
+        this.socket.addEventListener("error", () => {
+            this.onError?.("WebSocket 连接失败。请确认服务器已启动，并检查 ws 地址是否正确。");
         });
 
         this.heartbeatTimer = window.setInterval(() => {
             this.prunePlayers();
-            this.broadcast({
-                type: "heartbeat",
-                player: this.getLocalPlayer()
-            });
+
+            if (this.ready) {
+                this.broadcast({
+                    type: "heartbeat",
+                    player: this.getLocalPlayer()
+                });
+            }
         }, 1000);
     }
 
@@ -70,29 +124,8 @@ export class MultiplayerClient {
         return String(Math.floor(100000 + Math.random() * 900000));
     }
 
-    static getRoomMap(roomId) {
-        const raw = localStorage.getItem(`${ROOM_STORAGE_PREFIX}${roomId}.map`);
-
-        if (!raw) {
-            return null;
-        }
-
-        try {
-            return JSON.parse(raw);
-        } catch {
-            return null;
-        }
-    }
-
-    loadRoomMap() {
-        return MultiplayerClient.getRoomMap(this.roomId);
-    }
-
-    saveRoomMap(mapData) {
-        localStorage.setItem(
-            `${ROOM_STORAGE_PREFIX}${this.roomId}.map`,
-            JSON.stringify(mapData)
-        );
+    static getDefaultWebSocketUrl() {
+        return getDefaultWebSocketUrl();
     }
 
     destroy() {
@@ -100,24 +133,28 @@ export class MultiplayerClient {
             return;
         }
 
-        this.closed = true;
-
-        window.clearInterval(this.heartbeatTimer);
-
         this.broadcast({
             type: "leave",
             playerId: this.playerId
         });
 
-        this.channel.close();
+        this.closed = true;
+        window.clearInterval(this.heartbeatTimer);
+        this.socket.close();
+    }
+
+    sendRaw(message) {
+        if (this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(message));
+        }
     }
 
     broadcast(message) {
-        if (this.closed) {
+        if (this.closed || this.socket.readyState !== WebSocket.OPEN) {
             return;
         }
 
-        this.channel.postMessage({
+        this.sendRaw({
             ...message,
             roomId: this.roomId,
             senderId: this.playerId,
@@ -126,7 +163,34 @@ export class MultiplayerClient {
     }
 
     handleMessage(message) {
-        if (!message || message.roomId !== this.roomId) {
+        if (!message) {
+            return;
+        }
+
+        if (message.type === "roomCreated") {
+            this.ready = true;
+            this.mapData = message.mapData ? clone(message.mapData) : this.mapData;
+            this.loadPlayers(message.players);
+            this.mergeDeathOrder(message.deathOrder || []);
+            this.onReady?.(this.mapData);
+            return;
+        }
+
+        if (message.type === "joinSuccess") {
+            this.ready = true;
+            this.mapData = message.mapData ? clone(message.mapData) : this.mapData;
+            this.loadPlayers(message.players);
+            this.mergeDeathOrder(message.deathOrder || []);
+            this.onReady?.(this.mapData);
+            return;
+        }
+
+        if (message.type === "joinFailed") {
+            this.onError?.(message.reason || "加入房间失败。");
+            return;
+        }
+
+        if (message.roomId !== this.roomId) {
             return;
         }
 
@@ -134,38 +198,7 @@ export class MultiplayerClient {
             return;
         }
 
-        if (message.type === "hello") {
-            if (message.mapData && !this.mapData) {
-                this.mapData = clone(message.mapData);
-                this.saveRoomMap(this.mapData);
-            }
-
-            if (Array.isArray(message.deathOrder)) {
-                this.mergeDeathOrder(message.deathOrder);
-            }
-
-            this.upsertPlayer(message.player);
-
-            this.broadcast({
-                type: "helloAck",
-                player: this.getLocalPlayer(),
-                mapData: this.isHost ? this.mapData : null,
-                deathOrder: this.deathOrder
-            });
-
-            return;
-        }
-
-        if (message.type === "helloAck") {
-            if (message.mapData && !this.mapData) {
-                this.mapData = clone(message.mapData);
-                this.saveRoomMap(this.mapData);
-            }
-
-            if (Array.isArray(message.deathOrder)) {
-                this.mergeDeathOrder(message.deathOrder);
-            }
-
+        if (message.type === "playerJoined") {
             this.upsertPlayer(message.player);
             return;
         }
@@ -211,6 +244,16 @@ export class MultiplayerClient {
         }
     }
 
+    loadPlayers(players) {
+        if (!Array.isArray(players)) {
+            return;
+        }
+
+        for (const player of players) {
+            this.upsertPlayer(player);
+        }
+    }
+
     upsertPlayer(player) {
         if (!player || !player.id) {
             return;
@@ -234,6 +277,10 @@ export class MultiplayerClient {
     }
 
     updateLocalSnapshot(snapshot) {
+        if (!this.ready) {
+            return;
+        }
+
         const local = {
             ...this.getLocalPlayer(),
             ...snapshot,
@@ -292,6 +339,8 @@ export class MultiplayerClient {
             return;
         }
 
+        const wasAlive = player.alive !== false;
+
         if (!this.deathOrder.includes(playerId)) {
             this.deathOrder.push(playerId);
         }
@@ -300,6 +349,14 @@ export class MultiplayerClient {
         player.hp = 0;
         player.killerId = killerId;
         player.deathIndex = this.deathOrder.indexOf(playerId) + 1;
+
+        if (wasAlive && killerId && killerId !== playerId) {
+            const killer = this.players.get(killerId);
+
+            if (killer) {
+                killer.kills = (killer.kills || 0) + 1;
+            }
+        }
     }
 
     mergeDeathOrder(otherOrder) {

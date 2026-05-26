@@ -13,6 +13,7 @@
         <h1>Cube Shoot!</h1>
 
         <button id="openStartMenuButton">开始游戏</button>
+        <button id="openMapEditorButton">地图编辑器</button>
         <button id="openJoinMenuButton">加入房间</button>
         <button id="settingsButton">设置</button>
 
@@ -130,6 +131,72 @@
         <button id="closeSettingsButton">Back</button>
 
         <p id="settingsStatus"></p>
+    </div>
+
+    <div id="mapEditorPanel" class="map-editor-panel hidden">
+        <div class="map-editor-toolbar">
+            <div class="map-editor-title">地图编辑器</div>
+
+            <label>
+                工具
+                <select id="editorToolSelect">
+                    <option value="terrain">地形方块</option>
+                    <option value="player_start">玩家出生点</option>
+                    <option value="spawn_normal">普通敌人生成点</option>
+                    <option value="spawn_boss">Boss 生成点</option>
+                    <option value="pickup_shell_weapon">炮弹武器拾取</option>
+                    <option value="pickup_shell_ammo">炮弹弹药拾取</option>
+                    <option value="background_cloud">背景云</option>
+                    <option value="background_fence">背景栅栏</option>
+                    <option value="background_lantern">背景灯笼</option>
+                    <option value="background_dripstone">背景水滴石锥</option>
+                </select>
+            </label>
+
+            <label>
+                材质
+                <select id="editorMaterialSelect">
+                    <option value="grass">草方块</option>
+                    <option value="stone">石砖块</option>
+                    <option value="dirt">泥土块</option>
+                    <option value="solid">纯色方块</option>
+                    <option value="darkSolid">深色框纯色方块</option>
+                </select>
+            </label>
+
+            <label>
+                宽
+                <input id="editorBlockWidthInput" type="number" min="16" max="1200" value="160" />
+            </label>
+
+            <label>
+                高
+                <input id="editorBlockHeightInput" type="number" min="16" max="800" value="64" />
+            </label>
+
+            <label class="hidden">
+                Season
+                <select id="editorSeasonSelect">
+                    <option value="spring">Spring</option>
+                    <option value="summer">Summer</option>
+                    <option value="autumn">Autumn</option>
+                    <option value="winter">Winter</option>
+                </select>
+            </label>
+
+            <button id="editorSaveMapButton">保存本地</button>
+            <button id="editorLoadMapButton">读取本地</button>
+            <button id="editorClearMapButton">清空</button>
+            <button id="editorImportMapButton">导入</button>
+            <button id="editorExportMapButton">导出 JSON</button>
+            <button id="editorExportJsMapButton">导出 JS</button>
+            <button id="closeMapEditorButton">返回菜单</button>
+
+            <input id="editorImportMapInput" type="file" accept=".json,.js,application/json,text/javascript" hidden />
+        </div>
+
+        <textarea id="editorMapOutput" class="map-editor-output" placeholder="导出的地图数据会显示在这里；也可以粘贴 JSON / JS 地图后点击导入。"></textarea>
+        <p id="editorStatus" class="map-editor-status"></p>
     </div>
 
     <div id="escapeMenu" class="escape-menu hidden">

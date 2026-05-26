@@ -19,7 +19,7 @@ export const CONFIG = {
         width: 16,
         height: 6,
         speed: 12,
-        damage: 1,
+        damage: 18,
         cooldown: 95,
         maxDistance: 520,
 
@@ -31,7 +31,7 @@ export const CONFIG = {
         size: 14,
         speed: 5.8,
         jumpPower: 4.8,
-        damage: 3,
+        damage: 30,
         radius: 95,
         cooldown: 680,
         knockback: 11,

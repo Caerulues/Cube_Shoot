@@ -95,6 +95,10 @@ export class MapEditor {
     }
 
     start() {
+        if (this.running) {
+            return;
+        }
+
         this.running = true;
         requestAnimationFrame(() => this.loop());
     }
@@ -406,7 +410,7 @@ export class MapEditor {
 
         this.terrainStart = null;
 
-        if (tool === "player") {
+        if (tool === "player_start") {
             this.mapData.playerStart = { x, y };
             this.clearSelection();
             this.saveMap(false);
@@ -500,8 +504,8 @@ export class MapEditor {
             return;
         }
 
-        if (tool.startsWith("bg_")) {
-            this.placeBackgroundObject(tool.replace("bg_", ""), x, y);
+        if (tool.startsWith("background_")) {
+            this.placeBackgroundObject(tool.replace("background_", ""), x, y);
             this.clearSelection();
             this.saveMap(false);
         }

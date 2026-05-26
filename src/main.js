@@ -2,6 +2,7 @@ import { Game } from "./game.js";
 import { defaultMap } from "./maps/defaultMap.js";
 import { drawSeasonBackground } from "./seasonBackground.js";
 import { MultiplayerClient } from "./multiplayer.js";
+import { MapEditor } from "./mapEditor.js";
 import {
     loadSettings,
     saveSettings,
@@ -19,10 +20,12 @@ const panels = {
     single: document.getElementById("singlePlayerMenu"),
     create: document.getElementById("createRoomMenu"),
     join: document.getElementById("joinRoomMenu"),
-    settings: document.getElementById("settingsPanel")
+    settings: document.getElementById("settingsPanel"),
+    editor: document.getElementById("mapEditorPanel")
 };
 
 const openStartMenuButton = document.getElementById("openStartMenuButton");
+const openMapEditorButton = document.getElementById("openMapEditorButton");
 const openJoinMenuButton = document.getElementById("openJoinMenuButton");
 const settingsButton = document.getElementById("settingsButton");
 
@@ -75,9 +78,12 @@ const escapeSettingsButton = document.getElementById("escapeSettingsButton");
 const escapeExitButton = document.getElementById("escapeExitButton");
 const escapeSpectateButton = document.getElementById("escapeSpectateButton");
 
+const closeMapEditorButton = document.getElementById("closeMapEditorButton");
+
 let settings = loadSettings();
 let game = null;
 let multiplayerClient = null;
+let mapEditor = null;
 let currentMode = "menu";
 let settingsReturnTarget = "menu";
 let listeningAction = null;
@@ -93,6 +99,7 @@ showPanel("main");
 drawMenuFrame();
 
 openStartMenuButton.addEventListener("click", () => showPanel("start"));
+openMapEditorButton.addEventListener("click", openMapEditor);
 openJoinMenuButton.addEventListener("click", () => showPanel("join"));
 settingsButton.addEventListener("click", () => openSettings("menu"));
 
@@ -162,17 +169,36 @@ createRoomButton.addEventListener("click", () => {
         return;
     }
 
+    cleanupGame();
+
     const roomId = MultiplayerClient.createRoomId();
+    createRoomButton.disabled = true;
+    createMapStatus.textContent = "正在连接 WebSocket 服务器...";
 
     multiplayerClient = new MultiplayerClient({
         roomId,
         playerName,
         isHost: true,
-        mapData
-    });
+        mapData,
+        onReady: (serverMap) => {
+            createRoomButton.disabled = false;
+            createMapStatus.textContent = "房间已创建。";
+            startMultiplayerGame(serverMap, multiplayerClient);
+            showRoomCode(roomId);
+        },
+        onError: (message) => {
+            createRoomButton.disabled = false;
+            createMapStatus.textContent = message;
+            cleanupGame();
+        },
+        onClose: () => {
+            if (currentMode !== "game") {
+                return;
+            }
 
-    startMultiplayerGame(mapData, multiplayerClient);
-    showRoomCode(roomId);
+            backToMenu();
+        }
+    });
 });
 
 joinRoomButton.addEventListener("click", () => {
@@ -184,22 +210,35 @@ joinRoomButton.addEventListener("click", () => {
         return;
     }
 
-    const roomMap = MultiplayerClient.getRoomMap(roomId);
+    cleanupGame();
 
-    if (!roomMap) {
-        joinRoomStatus.textContent = "未找到房间地图。同一静态页面原型只能加入当前浏览器同源创建的房间。";
-        return;
-    }
+    joinRoomButton.disabled = true;
+    joinRoomStatus.textContent = "正在连接房间...";
 
     multiplayerClient = new MultiplayerClient({
         roomId,
         playerName,
         isHost: false,
-        mapData: roomMap
-    });
+        mapData: null,
+        onReady: (serverMap) => {
+            joinRoomButton.disabled = false;
+            joinRoomStatus.textContent = "已加入房间。";
+            startMultiplayerGame(serverMap, multiplayerClient);
+            showRoomCode(roomId);
+        },
+        onError: (message) => {
+            joinRoomButton.disabled = false;
+            joinRoomStatus.textContent = message;
+            cleanupGame();
+        },
+        onClose: () => {
+            if (currentMode !== "game") {
+                return;
+            }
 
-    startMultiplayerGame(roomMap, multiplayerClient);
-    showRoomCode(roomId);
+            backToMenu();
+        }
+    });
 });
 
 copyRoomCodeButton.addEventListener("click", async () => {
@@ -269,6 +308,8 @@ escapeSpectateButton.addEventListener("click", () => {
     }
 });
 
+closeMapEditorButton.addEventListener("click", closeMapEditor);
+
 for (const tab of escapeTabs) {
     tab.addEventListener("click", () => {
         setEscapeTab(tab.dataset.tab);
@@ -285,6 +326,10 @@ function resizeCanvas() {
 }
 
 function showPanel(name) {
+    if (currentMode === "editor" && name !== "editor") {
+        mapEditor?.stop();
+    }
+
     currentMode = "menu";
 
     for (const panel of Object.values(panels)) {
@@ -296,6 +341,46 @@ function showPanel(name) {
     roomInfoPanel.classList.add("hidden");
 
     drawMenuFrame();
+}
+
+function getMapEditorUi() {
+    return {
+        tool: document.getElementById("editorToolSelect"),
+        material: document.getElementById("editorMaterialSelect"),
+        blockWidth: document.getElementById("editorBlockWidthInput"),
+        blockHeight: document.getElementById("editorBlockHeightInput"),
+        season: document.getElementById("editorSeasonSelect"),
+        exportMap: document.getElementById("editorExportMapButton"),
+        exportJsMap: document.getElementById("editorExportJsMapButton"),
+        importMap: document.getElementById("editorImportMapButton"),
+        importMapInput: document.getElementById("editorImportMapInput"),
+        saveMap: document.getElementById("editorSaveMapButton"),
+        loadMap: document.getElementById("editorLoadMapButton"),
+        clearMap: document.getElementById("editorClearMapButton"),
+        output: document.getElementById("editorMapOutput"),
+        status: document.getElementById("editorStatus")
+    };
+}
+
+function openMapEditor() {
+    cleanupGame();
+
+    currentMode = "editor";
+    hideAllMenus();
+    roomInfoPanel.classList.add("hidden");
+    panels.editor.classList.remove("hidden");
+
+    if (!mapEditor) {
+        mapEditor = new MapEditor(canvas, getMapEditorUi(), settings);
+    }
+
+    mapEditor.settings = settings;
+    mapEditor.start();
+}
+
+function closeMapEditor() {
+    mapEditor?.stop();
+    showPanel("main");
 }
 
 async function readMapFile(file, statusElement) {
@@ -350,7 +435,7 @@ function startSinglePlayer(mapData) {
 }
 
 function startMultiplayerGame(mapData, client) {
-    cleanupGame();
+    cleanupGame(client);
 
     currentMode = "game";
     hideAllMenus();
@@ -366,15 +451,23 @@ function startMultiplayerGame(mapData, client) {
     game.start();
 }
 
-function cleanupGame() {
+function cleanupGame(keepClient = null) {
+    if (mapEditor?.running) {
+        mapEditor.stop();
+    }
+
     if (game) {
         game.stop?.();
         game = null;
     }
 
-    if (multiplayerClient) {
+    if (multiplayerClient && multiplayerClient !== keepClient) {
         multiplayerClient.destroy();
         multiplayerClient = null;
+    }
+
+    if (keepClient) {
+        multiplayerClient = keepClient;
     }
 }
 
@@ -414,6 +507,10 @@ function applySettings() {
 
     saveSettings(settings);
     refreshKeybindButtons();
+
+    if (mapEditor) {
+        mapEditor.settings = settings;
+    }
 
     if (game) {
         game.settings = settings;

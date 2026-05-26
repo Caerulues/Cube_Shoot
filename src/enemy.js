@@ -42,9 +42,9 @@ export class Enemy {
     }
 
     static createNormal(spawnPoint, wave) {
-        const hp = 1 + Math.floor(wave / 2);
+        const hp = 10 + Math.floor(wave / 2);
         const speed = CONFIG.enemy.baseSpeed + wave * 0.08;
-        const canJump = wave >= 5;
+        const canJump = 1;
 
         return new Enemy({
             x: spawnPoint.x,
@@ -67,7 +67,7 @@ export class Enemy {
             y: spawnPoint.y - size,
             size,
             speed: CONFIG.boss.baseSpeed + wave * 0.02,
-            hp: 6 + wave * 1.2,
+            hp: 36 + wave * 1.2,
             damage: 12 + Math.floor(wave / 3),
             canJump: false,
             isBoss: true,
@@ -174,7 +174,7 @@ export class Enemy {
 
         this.vx += this.patrolDirection * this.speed * 0.08;
 
-        const patrolMaxSpeed = this.speed * 0.55;
+        const patrolMaxSpeed = this.speed * 0.85;
 
         this.vx = Math.max(
             -patrolMaxSpeed,
@@ -199,7 +199,7 @@ export class Enemy {
             (playerIsAbove || closeToPlayer) &&
             !this.isBoss
         ) {
-            this.vy = -11;
+            this.vy = -16;
             this.onGround = false;
             this.jumpCooldown = 110 + Math.random() * 70;
         }

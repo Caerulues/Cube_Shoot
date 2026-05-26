@@ -62,6 +62,12 @@ export class Game {
         this.paused = false;
         this.running = false;
 
+        this.fixedTimeStep = 1000 / 60;
+        this.maxFrameTime = 100;
+        this.accumulator = 0;
+        this.lastFrameTime = null;
+        this.simulationTime = 0;
+
         this.spectating = false;
         this.spectatorIndex = 0;
         this.multiplayerDead = false;
@@ -86,11 +92,17 @@ export class Game {
         }
 
         this.running = true;
+        this.accumulator = 0;
+        this.lastFrameTime = null;
+        this.simulationTime = performance.now();
+
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
     stop() {
         this.running = false;
+        this.accumulator = 0;
+        this.lastFrameTime = null;
     }
 
     setPaused(paused) {
@@ -109,16 +121,38 @@ export class Game {
             return;
         }
 
+        if (this.lastFrameTime === null) {
+            this.lastFrameTime = timestamp;
+        }
+
+        const frameTime = Math.min(
+            timestamp - this.lastFrameTime,
+            this.maxFrameTime
+        );
+
+        this.lastFrameTime = timestamp;
+
         if (!this.paused) {
-            if (!this.gameOver) {
-                this.update(timestamp);
-            } else if (!this.isMultiplayer && this.input.wasLeftMousePressed()) {
-                this.restart();
+            this.accumulator += frameTime;
+
+            while (this.accumulator >= this.fixedTimeStep) {
+                this.simulationTime += this.fixedTimeStep;
+
+                if (!this.gameOver) {
+                    this.update(this.simulationTime);
+                } else if (!this.isMultiplayer && this.input.wasLeftMousePressed()) {
+                    this.restart();
+                    break;
+                }
+
+                this.input.endFrame();
+                this.accumulator -= this.fixedTimeStep;
             }
+        } else {
+            this.input.endFrame();
         }
 
         this.draw(timestamp);
-        this.input.endFrame();
 
         requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
     }
@@ -193,6 +227,7 @@ export class Game {
         this.updateEffects();
         this.updatePickups(timestamp);
         this.checkMultiplayerProjectileHits();
+        this.checkShellExplosions();
 
         if (this.multiplayerDead || this.spectating) {
             this.updateSpectatorTarget();
