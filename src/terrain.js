@@ -1,12 +1,15 @@
 import { defaultMap } from "./maps/defaultMap.js";
+import { drawTexture, normalizeMapAssets } from "./textureManager.js";
 
 export class Terrain {
     constructor(canvas, mapData = defaultMap) {
         this.canvas = canvas;
         this.mapData = structuredClone(mapData);
         this.mapData.pickups ||= [];
+        this.mapData.playerSpawnPoints ||= [];
         this.mapData.backgroundObjects ||= [];
         this.mapData.season ||= "spring";
+        normalizeMapAssets(this.mapData);
 
         this.worldWidth = this.mapData.worldWidth;
         this.worldHeight = this.mapData.worldHeight;
@@ -14,6 +17,7 @@ export class Terrain {
 
         this.terrainBlocks = this.mapData.terrainBlocks;
         this.spawnPoints = this.mapData.spawnPoints;
+        this.playerSpawnPoints = this.mapData.playerSpawnPoints;
         this.pickups = this.mapData.pickups;
         this.backgroundObjects = this.mapData.backgroundObjects;
     }
@@ -55,6 +59,25 @@ export class Terrain {
         return {
             x: this.mapData.playerStart.x,
             y: this.mapData.playerStart.y
+        };
+    }
+
+    getPlayerSpawnPoint(randomize = false) {
+        const points = Array.isArray(this.playerSpawnPoints)
+            ? this.playerSpawnPoints.filter((point) => point.enabled !== false)
+            : [];
+
+        if (points.length === 0) {
+            return this.getPlayerStart();
+        }
+
+        const index = randomize
+            ? Math.floor(Math.random() * points.length)
+            : 0;
+
+        return {
+            x: points[index].x,
+            y: points[index].y
         };
     }
 
@@ -335,7 +358,9 @@ export class Terrain {
         }
 
         this.drawTerrainBlocks(ctx, options.selectedBlockId);
-        this.drawSpawnPoints(ctx);
+        if (options.showSpawnPoints === true) {
+            this.drawSpawnPoints(ctx);
+        }
         this.drawWorldBounds(ctx);
         this.drawVoidLine(ctx);
         this.drawPickups(ctx);
@@ -357,6 +382,14 @@ export class Terrain {
 
             if (object.type === "dripstone") {
                 this.drawDripstone(ctx, object);
+            }
+
+            if (object.type === "image" && object.textureId) {
+                const width = object.width || 240;
+                const height = object.height || 140;
+                drawTexture(ctx, this.mapData, object.textureId, object.x, object.y, width, height, {
+                    alpha: Number.isFinite(Number(object.alpha)) ? Number(object.alpha) : 1
+                });
             }
         }
     }
@@ -491,23 +524,154 @@ export class Terrain {
                 continue;
             }
 
-            ctx.save();
+            const textureId = pickup.textureId || this.getPickupTextureId(pickup);
 
-            ctx.fillStyle = pickup.type === "weapon"
-                ? "#f97316"
-                : pickup.weapon === "shell"
-                    ? "#fb923c"
-                    : "#facc15";
+            if (textureId) {
+                const drawn = drawTexture(
+                    ctx,
+                    this.mapData,
+                    textureId,
+                    pickup.x,
+                    pickup.y,
+                    pickup.width,
+                    pickup.height,
+                    {
+                        fallback: () => this.drawPickupFallback(ctx, pickup)
+                    }
+                );
 
-            this.roundRect(ctx, pickup.x, pickup.y, pickup.width, pickup.height, 4);
-            ctx.fill();
+                if (drawn) {
+                    continue;
+                }
+            }
 
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.restore();
+            this.drawPickupFallback(ctx, pickup);
         }
+    }
+
+    getPickupTextureId(pickup) {
+        const icons = this.mapData.assets?.iconTextures || {};
+
+        if (pickup.type === "health") {
+            return icons.pickupHealth;
+        }
+
+        if (pickup.type === "weapon" && pickup.weapon === "shell") {
+            return icons.pickupShellWeapon;
+        }
+
+        if (pickup.type === "ammo" && pickup.weapon === "shell") {
+            return icons.pickupShellAmmo;
+        }
+
+        if (pickup.type === "ammo" && pickup.weapon === "bullet") {
+            return icons.pickupBulletAmmo;
+        }
+
+        return null;
+    }
+
+    drawPickupFallback(ctx, pickup) {
+        if (pickup.type === "health") {
+            this.drawHealthPickup(ctx, pickup);
+        } else if (pickup.type === "weapon" && pickup.weapon === "shell") {
+            this.drawShellWeaponPickup(ctx, pickup);
+        } else if (pickup.type === "ammo" && pickup.weapon === "shell") {
+            this.drawShellAmmoPickup(ctx, pickup);
+        } else if (pickup.type === "ammo" && pickup.weapon === "bullet") {
+            this.drawBulletAmmoPickup(ctx, pickup);
+        } else {
+            this.drawGenericPickup(ctx, pickup);
+        }
+    }
+
+    drawGenericPickup(ctx, pickup) {
+        ctx.save();
+        ctx.fillStyle = "#facc15";
+        this.roundRect(ctx, pickup.x, pickup.y, pickup.width, pickup.height, 4);
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawHealthPickup(ctx, pickup) {
+        const cx = pickup.x + pickup.width / 2;
+        const cy = pickup.y + pickup.height / 2 + 2;
+        const s = Math.min(pickup.width, pickup.height) / 2.2;
+
+        ctx.save();
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + s * 0.65);
+        ctx.bezierCurveTo(cx - s * 1.25, cy - s * 0.15, cx - s * 0.95, cy - s * 1.1, cx - s * 0.25, cy - s * 0.8);
+        ctx.bezierCurveTo(cx, cy - s * 1.35, cx + s * 0.25, cy - s * 1.35, cx + s * 0.5, cy - s * 0.8);
+        ctx.bezierCurveTo(cx + s * 1.2, cy - s * 1.1, cx + s * 1.25, cy - s * 0.15, cx, cy + s * 0.65);
+        ctx.fill();
+        ctx.strokeStyle = "#fecaca";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawBulletAmmoPickup(ctx, pickup) {
+        const x = pickup.x + 2;
+        const y = pickup.y + pickup.height / 2;
+
+        ctx.save();
+        ctx.fillStyle = "#cbd5e1";
+        ctx.beginPath();
+        ctx.moveTo(x, y - 7);
+        ctx.lineTo(x + pickup.width - 10, y - 7);
+        ctx.lineTo(x + pickup.width - 2, y);
+        ctx.lineTo(x + pickup.width - 10, y + 7);
+        ctx.lineTo(x, y + 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawShellAmmoPickup(ctx, pickup) {
+        const cx = pickup.x + pickup.width / 2;
+        const cy = pickup.y + pickup.height / 2;
+        const radius = Math.min(pickup.width, pickup.height) / 2 - 2;
+
+        ctx.save();
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fed7aa";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawShellWeaponPickup(ctx, pickup) {
+        const cx = pickup.x + pickup.width / 2;
+        const cy = pickup.y + pickup.height / 2;
+
+        ctx.save();
+        ctx.fillStyle = "#1f2937";
+        this.roundRect(ctx, pickup.x + 2, pickup.y + 8, pickup.width - 4, pickup.height - 12, 4);
+        ctx.fill();
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(pickup.x + pickup.width - 2, cy - 4, 9, 8);
+
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(pickup.x + 2, pickup.y + 8, pickup.width - 4, pickup.height - 12);
+        ctx.restore();
     }
 
     drawTerrainBlocks(ctx, selectedBlockId = null) {
@@ -517,6 +681,11 @@ export class Terrain {
     }
 
     drawBlock(ctx, block, selected = false) {
+        if (block.textureId) {
+            this.drawTexturedBlock(ctx, block, selected);
+            return;
+        }
+
         if (block.type === "grass") {
             this.drawGrassBlock(ctx, block, selected);
             return;
@@ -550,6 +719,37 @@ export class Terrain {
 
         this.roundRect(ctx, block.x, block.y, block.width, block.height, radius);
         ctx.stroke();
+
+        if (selected) {
+            this.drawSelection(ctx, block);
+        }
+
+        ctx.restore();
+    }
+
+
+    drawTexturedBlock(ctx, block, selected = false) {
+        const radius = Math.min(8, block.height / 5, block.width / 5);
+
+        ctx.save();
+        const drawn = drawTexture(ctx, this.mapData, block.textureId, block.x, block.y, block.width, block.height, {
+            repeat: block.textureMode !== "stretch",
+            clipRounded: true,
+            radius,
+            roundRect: (drawCtx, x, y, width, height, r) => this.roundRect(drawCtx, x, y, width, height, r),
+            fallback: () => {
+                this.roundRect(ctx, block.x, block.y, block.width, block.height, radius);
+                ctx.fillStyle = this.getBlockFillColor(block);
+                ctx.fill();
+            }
+        });
+
+        if (drawn) {
+            this.roundRect(ctx, block.x, block.y, block.width, block.height, radius);
+            ctx.strokeStyle = this.getBlockStrokeColor(block);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
 
         if (selected) {
             this.drawSelection(ctx, block);

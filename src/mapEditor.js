@@ -1,6 +1,7 @@
 import { Terrain } from "./terrain.js";
 import { defaultMap } from "./maps/defaultMap.js";
 import { drawSeasonBackground } from "./seasonBackground.js";
+import { normalizeMapAssets, getTextureList } from "./textureManager.js";
 
 const STORAGE_KEY = "cubeShoot.editorMap";
 const GRID_SIZE = 20;
@@ -53,6 +54,7 @@ export class MapEditor {
 
         this.mapData = this.loadMap();
         this.validateMap(this.mapData);
+        normalizeMapAssets(this.mapData);
 
         this.cameraX = 0;
         this.cameraY = 0;
@@ -127,6 +129,21 @@ export class MapEditor {
             this.syncForm();
         });
 
+        this.ui.spawnMode?.addEventListener("change", () => {
+            this.terrainStart = null;
+            this.clearSelection();
+
+            if (this.ui.spawnMode.value === "single_monster" && this.ui.tool.value === "player_spawn_multiplayer") {
+                this.ui.tool.value = "spawn_normal";
+            }
+
+            if (this.ui.spawnMode.value === "multiplayer_player" && (this.ui.tool.value === "spawn_normal" || this.ui.tool.value === "spawn_boss")) {
+                this.ui.tool.value = "player_spawn_multiplayer";
+            }
+
+            this.syncForm();
+        });
+
         this.ui.material.addEventListener("change", () => {
             const selectedBlock = this.getSelectedTerrainBlock();
 
@@ -136,6 +153,11 @@ export class MapEditor {
                 this.setStatus("Selected terrain material changed.");
             }
         });
+
+        this.ui.texture?.addEventListener("change", () => this.applySelectedTexture());
+        this.ui.addTexture?.addEventListener("click", () => this.ui.textureInput?.click());
+        this.ui.textureInput?.addEventListener("change", (event) => this.importTextureFile(event));
+        this.ui.applyIconTexture?.addEventListener("click", () => this.applyIconTexture());
 
         this.ui.blockWidth.addEventListener("change", () => this.clampSizeInputs());
         this.ui.blockHeight.addEventListener("change", () => this.clampSizeInputs());
@@ -301,8 +323,10 @@ export class MapEditor {
             playerStart: cloneMap(defaultMap.playerStart || { x: 160, y: 520 }),
             terrainBlocks: [],
             spawnPoints: [],
+            playerSpawnPoints: [],
             pickups: [],
-            backgroundObjects: []
+            backgroundObjects: [],
+            assets: cloneMap(defaultMap.assets || {})
         };
 
         this.terrainStart = null;
@@ -322,6 +346,17 @@ export class MapEditor {
 
     syncForm() {
         const isTerrain = this.ui.tool.value === "terrain";
+        const spawnMode = this.ui.spawnMode?.value || "single_monster";
+
+        for (const option of this.ui.tool.options) {
+            if (option.value === "spawn_normal" || option.value === "spawn_boss") {
+                option.hidden = spawnMode !== "single_monster";
+            }
+
+            if (option.value === "player_spawn_multiplayer") {
+                option.hidden = spawnMode !== "multiplayer_player";
+            }
+        }
 
         this.ui.material.disabled = !isTerrain;
         this.ui.blockWidth.disabled = !isTerrain;
@@ -331,6 +366,7 @@ export class MapEditor {
             this.mapData.season = this.settings?.season || this.ui.season.value || this.mapData.season || "spring";
         }
 
+        this.refreshTextureSelect();
         this.clampSizeInputs();
     }
 
@@ -414,7 +450,22 @@ export class MapEditor {
             this.mapData.playerStart = { x, y };
             this.clearSelection();
             this.saveMap(false);
-            this.setStatus("Player start moved.");
+            this.setStatus("Single-player start moved.");
+            return;
+        }
+
+        if (tool === "player_spawn_multiplayer") {
+            this.mapData.playerSpawnPoints ||= [];
+            this.mapData.playerSpawnPoints.push({
+                id: createId("player_spawn_multiplayer"),
+                x,
+                y,
+                enabled: true
+            });
+
+            this.clearSelection();
+            this.saveMap(false);
+            this.setStatus("Multiplayer player spawn added.");
             return;
         }
 
@@ -457,6 +508,7 @@ export class MapEditor {
                 height: 28,
                 type: "weapon",
                 weapon: "shell",
+                textureId: this.ui.texture?.value || "",
                 enabled: true
             });
 
@@ -476,6 +528,7 @@ export class MapEditor {
                 type: "ammo",
                 weapon: "shell",
                 amount: 4,
+                textureId: this.ui.texture?.value || "",
                 enabled: true
             });
 
@@ -495,12 +548,32 @@ export class MapEditor {
                 type: "ammo",
                 weapon: "bullet",
                 amount: 30,
+                textureId: this.ui.texture?.value || "",
                 enabled: true
             });
 
             this.clearSelection();
             this.saveMap(false);
             this.setStatus("Bullet ammo pickup added.");
+            return;
+        }
+
+        if (tool === "pickup_health") {
+            this.mapData.pickups.push({
+                id: createId("pickup_health"),
+                x,
+                y,
+                width: 26,
+                height: 26,
+                type: "health",
+                amount: 25,
+                textureId: this.ui.texture?.value || "",
+                enabled: true
+            });
+
+            this.clearSelection();
+            this.saveMap(false);
+            this.setStatus("Health pickup added.");
             return;
         }
 
@@ -521,7 +594,10 @@ export class MapEditor {
             };
 
             this.ui.material.value = clickedBlock.type || "grass";
-            this.setStatus("Terrain selected. Press Delete to remove it, or change material.");
+            if (this.ui.texture) {
+                this.ui.texture.value = clickedBlock.textureId || "";
+            }
+            this.setStatus("Terrain selected. Press Delete to remove it, or change material/texture.");
             return;
         }
 
@@ -546,7 +622,8 @@ export class MapEditor {
         this.mapData.terrainBlocks.push({
             id: createId("terrain"),
             ...rect,
-            type: this.ui.material.value
+            type: this.ui.material.value,
+            textureId: this.ui.texture?.value || ""
         });
 
         this.terrainStart = null;
@@ -634,7 +711,146 @@ export class MapEditor {
             });
 
             this.setStatus("Background dripstone added.");
+            return;
         }
+
+        if (type === "image") {
+            this.mapData.backgroundObjects.push({
+                ...base,
+                type: "image",
+                width: 240,
+                height: 140,
+                alpha: 1,
+                textureId: this.ui.texture?.value || ""
+            });
+
+            this.setStatus("Background image added.");
+        }
+    }
+
+
+    refreshTextureSelect() {
+        if (!this.ui.texture) {
+            return;
+        }
+
+        const current = this.ui.texture.value;
+        normalizeMapAssets(this.mapData);
+        const textures = getTextureList(this.mapData);
+
+        this.ui.texture.innerHTML = '<option value="">默认 / 无贴图</option>';
+
+        for (const texture of textures) {
+            const option = document.createElement("option");
+            option.value = texture.id;
+            option.textContent = `${texture.id}${texture.kind ? ` (${texture.kind})` : ""}`;
+            this.ui.texture.appendChild(option);
+        }
+
+        this.ui.texture.value = textures.some((texture) => texture.id === current) ? current : "";
+    }
+
+    applySelectedTexture() {
+        const textureId = this.ui.texture?.value || "";
+
+        if (this.selected.category === "terrain") {
+            const block = this.getSelectedTerrainBlock();
+
+            if (block) {
+                block.textureId = textureId;
+                this.saveMap(false);
+                this.setStatus(textureId ? `Selected terrain texture set to ${textureId}.` : "Selected terrain texture cleared.");
+                return;
+            }
+        }
+
+        if (this.selected.category === "pickup") {
+            const pickup = this.mapData.pickups.find((item) => item.id === this.selected.id);
+
+            if (pickup) {
+                pickup.textureId = textureId;
+                this.saveMap(false);
+                this.setStatus(textureId ? `Selected pickup texture set to ${textureId}.` : "Selected pickup texture cleared.");
+                return;
+            }
+        }
+
+        if (this.selected.category === "background") {
+            const object = this.mapData.backgroundObjects.find((item) => item.id === this.selected.id);
+
+            if (object) {
+                object.textureId = textureId;
+                this.saveMap(false);
+                this.setStatus(textureId ? `Selected background texture set to ${textureId}.` : "Selected background texture cleared.");
+            }
+        }
+    }
+
+
+    applyIconTexture() {
+        const textureId = this.ui.texture?.value || "";
+        const slot = this.ui.iconSlot?.value || "";
+
+        if (!textureId || !slot) {
+            this.setStatus("Choose a texture and an icon slot first.");
+            return;
+        }
+
+        normalizeMapAssets(this.mapData);
+        this.mapData.assets.iconTextures[slot] = textureId;
+        this.saveMap(false);
+        this.setStatus(`Icon slot ${slot} now uses ${textureId}.`);
+    }
+
+    importTextureFile(event) {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        const idFromName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]+/g, "_").toLowerCase();
+        const textureId = window.prompt("Texture ID", idFromName);
+
+        if (!textureId) {
+            this.ui.textureInput.value = "";
+            return;
+        }
+
+        const kind = window.prompt("Texture kind: terrain / background / pickup / ui", "terrain") || "terrain";
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            normalizeMapAssets(this.mapData);
+            const textures = this.mapData.assets.textures;
+            const texture = {
+                id: textureId.trim(),
+                name: file.name,
+                kind: kind.trim(),
+                src: String(reader.result || "")
+            };
+            const index = textures.findIndex((item) => item.id === texture.id);
+
+            if (index >= 0) {
+                textures[index] = texture;
+            } else {
+                textures.push(texture);
+            }
+
+            this.refreshTextureSelect();
+            this.ui.texture.value = texture.id;
+            this.applySelectedTexture();
+            this.saveMap(false);
+            this.setStatus(`Texture added: ${texture.id}. It will be exported inside the map JSON.`);
+            this.ui.textureInput.value = "";
+        };
+
+        reader.onerror = () => {
+            this.setStatus("Texture import failed.");
+            this.ui.textureInput.value = "";
+        };
+
+        reader.readAsDataURL(file);
     }
 
     deleteSelected() {
@@ -657,7 +873,15 @@ export class MapEditor {
             this.mapData.spawnPoints = this.mapData.spawnPoints.filter((point) => point.id !== id);
             this.clearSelection();
             this.saveMap(false);
-            this.setStatus("Selected spawn deleted.");
+            this.setStatus("Selected monster spawn deleted.");
+            return;
+        }
+
+        if (category === "playerSpawn") {
+            this.mapData.playerSpawnPoints = (this.mapData.playerSpawnPoints || []).filter((point) => point.id !== id);
+            this.clearSelection();
+            this.saveMap(false);
+            this.setStatus("Selected multiplayer player spawn deleted.");
             return;
         }
 
@@ -723,6 +947,26 @@ export class MapEditor {
         return null;
     }
 
+    findPlayerSpawnAt(x, y) {
+        const points = this.mapData.playerSpawnPoints || [];
+
+        for (let i = points.length - 1; i >= 0; i--) {
+            const point = points[i];
+            const rect = {
+                x: point.x - 16,
+                y: point.y - 38,
+                width: 32,
+                height: 42
+            };
+
+            if (pointInRect(x, y, rect)) {
+                return point;
+            }
+        }
+
+        return null;
+    }
+
     findPickupAt(x, y) {
         for (let i = this.mapData.pickups.length - 1; i >= 0; i--) {
             const pickup = this.mapData.pickups[i];
@@ -767,13 +1011,28 @@ export class MapEditor {
             };
         }
 
-        const spawn = this.findSpawnAt(x, y);
+        const spawnMode = this.ui.spawnMode?.value || "single_monster";
 
-        if (spawn) {
-            return {
-                category: "spawn",
-                object: spawn
-            };
+        if (spawnMode === "single_monster") {
+            const spawn = this.findSpawnAt(x, y);
+
+            if (spawn) {
+                return {
+                    category: "spawn",
+                    object: spawn
+                };
+            }
+        }
+
+        if (spawnMode === "multiplayer_player") {
+            const playerSpawn = this.findPlayerSpawnAt(x, y);
+
+            if (playerSpawn) {
+                return {
+                    category: "playerSpawn",
+                    object: playerSpawn
+                };
+            }
         }
 
         const background = this.findBackgroundObjectAt(x, y);
@@ -824,6 +1083,15 @@ export class MapEditor {
                 y: object.y,
                 width: object.width || 34,
                 height: object.height || 95
+            };
+        }
+
+        if (object.type === "image") {
+            return {
+                x: object.x,
+                y: object.y,
+                width: object.width || 240,
+                height: object.height || 140
             };
         }
 
@@ -917,6 +1185,10 @@ export class MapEditor {
             data.spawnPoints = [];
         }
 
+        if (!Array.isArray(data.playerSpawnPoints)) {
+            data.playerSpawnPoints = [];
+        }
+
         if (!Array.isArray(data.pickups)) {
             data.pickups = [];
         }
@@ -929,6 +1201,7 @@ export class MapEditor {
         data.worldHeight = Number(data.worldHeight) || 1300;
         data.voidY = Number(data.voidY) || 1180;
         data.season ||= this.settings?.season || "spring";
+        normalizeMapAssets(data);
 
         data.playerStart.x = Number(data.playerStart.x) || 160;
         data.playerStart.y = Number(data.playerStart.y) || 520;
@@ -940,6 +1213,8 @@ export class MapEditor {
             block.width = Math.max(GRID_SIZE, Number(block.width) || GRID_SIZE);
             block.height = Math.max(GRID_SIZE, Number(block.height) || GRID_SIZE);
             block.type ||= "grass";
+            block.textureId ||= "";
+            block.textureMode ||= "repeat";
         }
 
         for (const point of data.spawnPoints) {
@@ -947,6 +1222,13 @@ export class MapEditor {
             point.x = Number(point.x) || 0;
             point.y = Number(point.y) || 0;
             point.type = point.type === "boss" ? "boss" : "normal";
+            point.enabled = point.enabled !== false;
+        }
+
+        for (const point of data.playerSpawnPoints) {
+            point.id ||= createId("player_spawn_multiplayer");
+            point.x = Number(point.x) || 0;
+            point.y = Number(point.y) || 0;
             point.enabled = point.enabled !== false;
         }
 
@@ -959,6 +1241,7 @@ export class MapEditor {
             pickup.type ||= "ammo";
             pickup.weapon ||= "bullet";
             pickup.amount = Number(pickup.amount) || 1;
+            pickup.textureId ||= "";
             pickup.enabled = pickup.enabled !== false;
         }
 
@@ -968,6 +1251,9 @@ export class MapEditor {
             object.y = Number(object.y) || 0;
             object.type ||= "cloud";
             object.alpha = Number.isFinite(Number(object.alpha)) ? Number(object.alpha) : 0.75;
+            object.textureId ||= "";
+            object.width = Number(object.width) || (object.type === "image" ? 240 : object.width);
+            object.height = Number(object.height) || (object.type === "image" ? 140 : object.height);
         }
     }
 
@@ -1090,7 +1376,12 @@ export class MapEditor {
     }
 
     drawEditorMarkers() {
-        this.drawSpawnMarkers();
+        if ((this.ui.spawnMode?.value || "single_monster") === "single_monster") {
+            this.drawSpawnMarkers();
+        } else {
+            this.drawPlayerSpawnMarkers();
+        }
+
         this.drawPickupMarkers();
         this.drawBackgroundSelection();
     }
@@ -1113,6 +1404,27 @@ export class MapEditor {
             this.ctx.fillStyle = "#111827";
             this.ctx.font = `${13 / this.zoom}px Arial`;
             this.ctx.fillText(point.type === "boss" ? "Boss" : "Spawn", point.x + 16, point.y - 14);
+        }
+
+        this.ctx.restore();
+    }
+
+    drawPlayerSpawnMarkers() {
+        this.ctx.save();
+
+        for (const point of this.mapData.playerSpawnPoints || []) {
+            const selected = this.selected.category === "playerSpawn" && this.selected.id === point.id;
+
+            this.ctx.fillStyle = "#22d3ee";
+            this.ctx.strokeStyle = selected ? "#38bdf8" : "white";
+            this.ctx.lineWidth = selected ? 4 / this.zoom : 2 / this.zoom;
+
+            this.ctx.fillRect(point.x - 12, point.y - 34, 24, 34);
+            this.ctx.strokeRect(point.x - 12, point.y - 34, 24, 34);
+
+            this.ctx.fillStyle = "#111827";
+            this.ctx.font = `${13 / this.zoom}px Arial`;
+            this.ctx.fillText("MP Spawn", point.x + 16, point.y - 16);
         }
 
         this.ctx.restore();

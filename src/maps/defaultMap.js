@@ -9,6 +9,15 @@ export const defaultMap = {
                 y: 430
             },
 
+            playerSpawnPoints: [
+                { id: "mp_spawn_upper_left", x: 180, y: 430, enabled: true },
+                { id: "mp_spawn_upper_center", x: 940, y: 390, enabled: true },
+                { id: "mp_spawn_upper_right", x: 1860, y: 430, enabled: true },
+                { id: "mp_spawn_middle_left", x: 520, y: 650, enabled: true },
+                { id: "mp_spawn_middle_center", x: 1280, y: 690, enabled: true },
+                { id: "mp_spawn_bottom_center", x: 1560, y: 940, enabled: true }
+            ],
+
             terrainBlocks: [
                 // 上层主岛
                 {
@@ -243,6 +252,26 @@ export const defaultMap = {
                     type: "ammo",
                     weapon: "bullet",
                     amount: 30,
+                    enabled: true
+                },
+                {
+                    id: "pickup_health_1",
+                    x: 650,
+                    y: 260,
+                    width: 28,
+                    height: 28,
+                    type: "health",
+                    amount: 25,
+                    enabled: true
+                },
+                {
+                    id: "pickup_health_2",
+                    x: 2320,
+                    y: 850,
+                    width: 28,
+                    height: 28,
+                    type: "health",
+                    amount: 25,
                     enabled: true
                 }
             ]

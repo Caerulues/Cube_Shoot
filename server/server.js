@@ -10,7 +10,8 @@ function getRoom(roomId) {
             id: roomId,
             mapData: null,
             clients: new Map(),
-            deathOrder: []
+            deathOrder: [],
+            hostId: null
         });
     }
 
@@ -68,6 +69,7 @@ wss.on("connection", (ws) => {
         if (type === "createRoom") {
             const room = getRoom(currentRoomId);
             room.mapData = message.mapData || room.mapData;
+            room.hostId = currentPlayerId;
             room.clients.set(currentPlayerId, {
                 ws,
                 player: message.player
@@ -138,6 +140,26 @@ wss.on("connection", (ws) => {
                 client.player.hp = 0;
                 client.player.killerId = message.killerId || null;
                 client.player.deathIndex = room.deathOrder.indexOf(message.playerId) + 1;
+            }
+        }
+
+        if (type === "restartMatch") {
+            if (currentPlayerId !== room.hostId) {
+                return;
+            }
+
+            room.deathOrder = [];
+
+            for (const client of room.clients.values()) {
+                if (!client.player) {
+                    continue;
+                }
+
+                client.player.alive = true;
+                client.player.hp = 100;
+                client.player.kills = 0;
+                client.player.deathIndex = null;
+                client.player.killerId = null;
             }
         }
 

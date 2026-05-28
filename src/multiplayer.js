@@ -220,6 +220,25 @@ export class MultiplayerClient {
             return;
         }
 
+        if (message.type === "projectileFired") {
+            this.pendingEvents.push({
+                type: "projectileFired",
+                projectile: message.projectile,
+                ownerId: message.ownerId
+            });
+
+            return;
+        }
+
+        if (message.type === "restartMatch") {
+            this.resetMatchState();
+            this.pendingEvents.push({
+                type: "restartMatch"
+            });
+
+            return;
+        }
+
         if (message.type === "playerDied") {
             this.markPlayerDead(message.playerId, message.killerId);
             return;
@@ -304,6 +323,38 @@ export class MultiplayerClient {
             attackerId: this.playerId,
             damage
         });
+    }
+
+    sendProjectile(projectile) {
+        this.broadcast({
+            type: "projectileFired",
+            ownerId: this.playerId,
+            projectile
+        });
+    }
+
+    sendRestartMatch() {
+        if (!this.isHost) {
+            return;
+        }
+
+        this.resetMatchState();
+
+        this.broadcast({
+            type: "restartMatch"
+        });
+    }
+
+    resetMatchState() {
+        this.deathOrder = [];
+
+        for (const player of this.players.values()) {
+            player.alive = true;
+            player.hp = 100;
+            player.kills = 0;
+            player.deathIndex = null;
+            player.killerId = null;
+        }
     }
 
     sendDeath(killerId = null) {

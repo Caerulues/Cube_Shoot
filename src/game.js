@@ -13,6 +13,7 @@ import {
 import { Terrain } from "./terrain.js";
 import { Camera } from "./camera.js";
 import { drawSeasonBackground } from "./seasonBackground.js";
+import { drawTexture, normalizeMapAssets } from "./textureManager.js";
 
 export class Game {
     constructor(canvas, mapData = null, settings = null, options = {}) {
@@ -33,8 +34,13 @@ export class Game {
 
         this.input = new InputManager(this.settings);
 
+        this.mapData = mapData || undefined;
+        if (this.mapData) {
+            normalizeMapAssets(this.mapData);
+        }
+
         this.season = this.settings.season || mapData?.season || "spring";
-        this.terrain = new Terrain(canvas, mapData || undefined);
+        this.terrain = new Terrain(canvas, this.mapData);
 
         this.camera = new Camera(
             canvas,
@@ -45,7 +51,7 @@ export class Game {
         this.waveManager = new WaveManager(canvas, this.terrain);
         this.weaponManager = new WeaponManager();
 
-        const start = this.terrain.getPlayerStart();
+        const start = this.getInitialPlayerStart();
         this.player = new Player(start.x, start.y - CONFIG.player.size);
 
         this.bullets = [];
@@ -74,6 +80,7 @@ export class Game {
         this.multiplayerRankingShown = false;
         this.lastMultiplayerSyncTime = 0;
         this.lastAttackerId = null;
+        this.restartButtonRect = null;
 
         this.noPlayerInput = {
             isDown: () => false,
@@ -240,6 +247,10 @@ export class Game {
         if (this.multiplayerClient?.isMatchFinished()) {
             this.multiplayerRankingShown = true;
         }
+
+        if (this.multiplayerRankingShown) {
+            this.handleMultiplayerRestartInput();
+        }
     }
 
     consumeMultiplayerEvents() {
@@ -256,6 +267,14 @@ export class Game {
                     this.player.hp = 0;
                     this.dieInMultiplayer(event.attackerId);
                 }
+            }
+
+            if (event.type === "projectileFired") {
+                this.spawnRemoteProjectile(event.projectile, event.ownerId);
+            }
+
+            if (event.type === "restartMatch") {
+                this.restartMultiplayerMatch(false);
             }
         }
     }
@@ -275,7 +294,8 @@ export class Game {
             facing: this.player.facing,
             hp: this.player.hp,
             alive: !this.multiplayerDead,
-            kills: this.multiplayerClient.getLocalPlayer()?.kills || 0
+            kills: this.multiplayerClient.getLocalPlayer()?.kills || 0,
+            selectedWeapon: this.weaponManager.getSelectedWeapon()?.id || "bullet"
         });
     }
 
@@ -361,6 +381,10 @@ export class Game {
         for (let bulletIndex = this.bullets.length - 1; bulletIndex >= 0; bulletIndex--) {
             const bullet = this.bullets[bulletIndex];
 
+            if (bullet.isRemote) {
+                continue;
+            }
+
             for (const player of remotePlayers) {
                 const rect = {
                     x: player.x + 3,
@@ -387,6 +411,10 @@ export class Game {
 
         for (let shellIndex = this.shells.length - 1; shellIndex >= 0; shellIndex--) {
             const shell = this.shells[shellIndex];
+
+            if (shell.isRemote) {
+                continue;
+            }
 
             if (!shell.shouldExplode && shell.active) {
                 continue;
@@ -595,7 +623,19 @@ export class Game {
             this.player.size / 2 -
             CONFIG.bullet.height / 2;
 
-        this.bullets.push(new Bullet(x, y, direction));
+        const bullet = new Bullet(x, y, direction);
+        bullet.ownerId = this.multiplayerClient?.playerId || "local";
+        bullet.isRemote = false;
+        this.bullets.push(bullet);
+
+        if (this.isMultiplayer) {
+            this.multiplayerClient?.sendProjectile({
+                kind: "bullet",
+                x,
+                y,
+                direction
+            });
+        }
     }
 
     fireShell() {
@@ -610,7 +650,40 @@ export class Game {
             this.player.size / 2 -
             CONFIG.shell.size / 2;
 
-        this.shells.push(new Shell(x, y, direction));
+        const shell = new Shell(x, y, direction);
+        shell.ownerId = this.multiplayerClient?.playerId || "local";
+        shell.isRemote = false;
+        this.shells.push(shell);
+
+        if (this.isMultiplayer) {
+            this.multiplayerClient?.sendProjectile({
+                kind: "shell",
+                x,
+                y,
+                direction
+            });
+        }
+    }
+
+    spawnRemoteProjectile(projectile, ownerId) {
+        if (!projectile || !ownerId || ownerId === this.multiplayerClient?.playerId) {
+            return;
+        }
+
+        if (projectile.kind === "bullet") {
+            const bullet = new Bullet(projectile.x, projectile.y, projectile.direction);
+            bullet.ownerId = ownerId;
+            bullet.isRemote = true;
+            this.bullets.push(bullet);
+            return;
+        }
+
+        if (projectile.kind === "shell") {
+            const shell = new Shell(projectile.x, projectile.y, projectile.direction);
+            shell.ownerId = ownerId;
+            shell.isRemote = true;
+            this.shells.push(shell);
+        }
     }
 
     updateProjectiles() {
@@ -838,7 +911,7 @@ export class Game {
 
             pickup.enabled = false;
 
-            const respawnDelay = pickup.type === "weapon" ? 15000 : 8000;
+            const respawnDelay = pickup.type === "weapon" ? 15000 : pickup.type === "health" ? 12000 : 8000;
             pickup.respawnAt = timestamp + respawnDelay;
 
             if (pickup.type === "weapon") {
@@ -847,6 +920,11 @@ export class Game {
             } else if (pickup.type === "ammo") {
                 this.weaponManager.addAmmo(pickup.weapon, pickup.amount);
                 this.showMessage(`Picked up ${pickup.weapon} ammo +${pickup.amount}`, timestamp);
+            } else if (pickup.type === "health") {
+                const amount = pickup.amount || 25;
+                const maxHp = CONFIG.player.hp;
+                this.player.hp = Math.min(maxHp, this.player.hp + amount);
+                this.showMessage(`Picked up health +${amount}`, timestamp);
             }
         }
     }
@@ -880,11 +958,19 @@ export class Game {
         this.gameOverReason = reason;
     }
 
+    getInitialPlayerStart() {
+        if (this.isMultiplayer) {
+            return this.terrain.getPlayerSpawnPoint(true);
+        }
+
+        return this.terrain.getPlayerStart();
+    }
+
     restart() {
         this.waveManager = new WaveManager(this.canvas, this.terrain);
         this.weaponManager = new WeaponManager();
 
-        const start = this.terrain.getPlayerStart();
+        const start = this.getInitialPlayerStart();
         this.player = new Player(start.x, start.y - CONFIG.player.size);
 
         for (const pickup of this.terrain.pickups) {
@@ -903,8 +989,55 @@ export class Game {
 
         this.freeCamera = false;
         this.paused = false;
+        this.spectating = false;
+        this.multiplayerDead = false;
+        this.multiplayerRankingShown = false;
+        this.lastAttackerId = null;
 
         this.camera.snapToTarget(this.player);
+    }
+
+    restartMultiplayerMatch(shouldBroadcast = true) {
+        if (!this.isMultiplayer) {
+            this.restart();
+            return;
+        }
+
+        if (shouldBroadcast && !this.multiplayerClient?.isHost) {
+            return;
+        }
+
+        this.restart();
+
+        if (shouldBroadcast) {
+            this.multiplayerClient?.sendRestartMatch();
+        } else {
+            this.multiplayerClient?.resetMatchState();
+        }
+
+        this.syncMultiplayerSnapshot(performance.now() + 1000);
+    }
+
+    handleMultiplayerRestartInput() {
+        if (!this.multiplayerClient?.isHost) {
+            return;
+        }
+
+        if (!this.input.wasLeftMousePressed() || !this.restartButtonRect) {
+            return;
+        }
+
+        const { x, y, width, height } = this.restartButtonRect;
+        const mouse = this.input.mouse;
+        const inside =
+            mouse.x >= x &&
+            mouse.x <= x + width &&
+            mouse.y >= y &&
+            mouse.y <= y + height;
+
+        if (inside) {
+            this.restartMultiplayerMatch(true);
+        }
     }
 
     resizeCanvas() {
@@ -987,6 +1120,8 @@ export class Game {
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(remote.x, remote.y, CONFIG.player.size, CONFIG.player.size);
 
+            this.drawRemotePlayerGun(remote);
+
             this.ctx.fillStyle = "white";
             this.ctx.font = "14px Arial";
             this.ctx.textAlign = "center";
@@ -998,6 +1133,50 @@ export class Game {
 
             this.ctx.restore();
         }
+    }
+
+    drawRemotePlayerGun(remote) {
+        const size = CONFIG.player.size;
+        const centerY = remote.y + size / 2;
+        const facing = remote.facing === -1 ? -1 : 1;
+        const barrelStartX = facing === 1 ? remote.x + size - 2 : remote.x + 2;
+        const barrelEndX = facing === 1 ? remote.x + size + 19 : remote.x - 19;
+        const gripX = facing === 1 ? remote.x + size - 2 : remote.x + 2;
+
+        this.ctx.save();
+        this.ctx.lineCap = "round";
+        this.ctx.lineJoin = "round";
+
+        this.ctx.strokeStyle = "#111827";
+        this.ctx.lineWidth = 9;
+        this.ctx.beginPath();
+        this.ctx.moveTo(barrelStartX, centerY - 2);
+        this.ctx.lineTo(barrelEndX, centerY - 2);
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = "#f8fafc";
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(barrelStartX, centerY - 2);
+        this.ctx.lineTo(barrelEndX, centerY - 2);
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = "#111827";
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(gripX, centerY + 1);
+        this.ctx.lineTo(gripX - facing * 7, centerY + 12);
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = "#facc15";
+        this.ctx.beginPath();
+        this.ctx.moveTo(barrelEndX + facing * 8, centerY - 2);
+        this.ctx.lineTo(barrelEndX - facing * 1, centerY - 7);
+        this.ctx.lineTo(barrelEndX - facing * 1, centerY + 3);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.restore();
     }
 
     drawHitboxes() {
@@ -1048,14 +1227,7 @@ export class Game {
         this.ctx.save();
 
         this.ctx.textBaseline = "middle";
-        this.ctx.font = "24px Arial";
-
-        this.ctx.fillStyle = "#ef4444";
-        this.ctx.fillText("♥", 24, 34);
-
-        this.ctx.fillStyle = "white";
-        this.ctx.font = "18px Arial";
-        this.ctx.fillText(`${hpPercent}%`, 56, 35);
+        this.drawHealthHearts(24, 34, hpPercent);
 
         this.drawSelectedAmmoSlots(selected, 24, 72);
 
@@ -1091,6 +1263,36 @@ export class Game {
         }
     }
 
+    drawHealthHearts(x, y, hpPercent) {
+        const slots = 8;
+        const filledSlots = Math.ceil((hpPercent / 100) * slots);
+        const icons = this.terrain.mapData.assets?.iconTextures || {};
+
+        this.ctx.save();
+        this.ctx.textBaseline = "middle";
+
+        for (let i = 0; i < slots; i++) {
+            const textureId = i < filledSlots ? icons.heartFull : icons.heartEmpty;
+            const slotX = x + i * 26;
+            const drawn = drawTexture(this.ctx, this.terrain.mapData, textureId, slotX - 2, y - 13, 24, 24, {
+                fallback: () => {
+                    this.ctx.fillStyle = i < filledSlots ? "#ef4444" : "rgba(239, 68, 68, 0.24)";
+                    this.ctx.font = "25px Arial";
+                    this.ctx.fillText("♥", slotX, y);
+                }
+            });
+
+            if (!drawn) {
+                continue;
+            }
+        }
+
+        this.ctx.fillStyle = "white";
+        this.ctx.font = "18px Arial";
+        this.ctx.fillText(`${hpPercent}%`, x + slots * 26 + 10, y + 1);
+        this.ctx.restore();
+    }
+
     drawSelectedAmmoSlots(weapon, x, y) {
         const slots = 8;
 
@@ -1124,11 +1326,21 @@ export class Game {
     }
 
     drawAmmoBulletSlot(x, y, filled) {
-        this.ctx.save();
+        const icons = this.terrain.mapData.assets?.iconTextures || {};
+        const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoBullet, x, y - 8, 20, 16, {
+            alpha: filled ? 1 : 0.28,
+            fallback: () => this.drawAmmoBulletFallback(x, y, filled)
+        });
 
+        if (!drawn) {
+            this.drawAmmoBulletFallback(x, y, filled);
+        }
+    }
+
+    drawAmmoBulletFallback(x, y, filled) {
+        this.ctx.save();
         this.ctx.globalAlpha = filled ? 1 : 0.28;
         this.ctx.fillStyle = filled ? "#cbd5e1" : "#64748b";
-
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - 7);
         this.ctx.lineTo(x + 13, y - 7);
@@ -1137,28 +1349,34 @@ export class Game {
         this.ctx.lineTo(x, y + 7);
         this.ctx.closePath();
         this.ctx.fill();
-
         this.ctx.strokeStyle = filled ? "#f8fafc" : "#94a3b8";
         this.ctx.lineWidth = 1.5;
         this.ctx.stroke();
-
         this.ctx.restore();
     }
 
     drawAmmoShellSlot(x, y, filled) {
-        this.ctx.save();
+        const icons = this.terrain.mapData.assets?.iconTextures || {};
+        const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoShell, x - 8, y - 8, 16, 16, {
+            alpha: filled ? 1 : 0.28,
+            fallback: () => this.drawAmmoShellFallback(x, y, filled)
+        });
 
+        if (!drawn) {
+            this.drawAmmoShellFallback(x, y, filled);
+        }
+    }
+
+    drawAmmoShellFallback(x, y, filled) {
+        this.ctx.save();
         this.ctx.globalAlpha = filled ? 1 : 0.28;
         this.ctx.fillStyle = filled ? "#facc15" : "#64748b";
-
         this.ctx.beginPath();
         this.ctx.arc(x, y, 8, 0, Math.PI * 2);
         this.ctx.fill();
-
         this.ctx.strokeStyle = filled ? "#fef3c7" : "#94a3b8";
         this.ctx.lineWidth = 1.5;
         this.ctx.stroke();
-
         this.ctx.restore();
     }
 
@@ -1198,8 +1416,10 @@ export class Game {
         const panelX = this.canvas.width / 2 - panelWidth / 2;
         const panelY = 110;
 
+        const panelHeight = 150 + leaderboard.length * 44;
+
         this.ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-        this.ctx.fillRect(panelX, panelY, panelWidth, 80 + leaderboard.length * 44);
+        this.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
         this.ctx.fillStyle = "#111827";
         this.ctx.textAlign = "center";
@@ -1230,9 +1450,41 @@ export class Game {
             this.ctx.fillText(String(player.kills), panelX + 370, y);
         }
 
+        const buttonWidth = 210;
+        const buttonHeight = 42;
+        const buttonX = this.canvas.width / 2 - buttonWidth / 2;
+        const buttonY = panelY + 102 + leaderboard.length * 44;
+
+        this.restartButtonRect = {
+            x: buttonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+
+        if (this.multiplayerClient?.isHost) {
+            this.ctx.fillStyle = "#2563eb";
+            this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+            this.ctx.strokeStyle = "#dbeafe";
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+            this.ctx.fillStyle = "white";
+            this.ctx.font = "18px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText("重新开始", this.canvas.width / 2, buttonY + 27);
+        } else {
+            this.ctx.fillStyle = "#374151";
+            this.ctx.font = "16px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText("等待房主重新开始", this.canvas.width / 2, buttonY + 25);
+        }
+
         this.ctx.font = "16px Arial";
         this.ctx.textAlign = "center";
-        this.ctx.fillText("按 ESC 退出游戏", this.canvas.width / 2, panelY + 112 + leaderboard.length * 44);
+        this.ctx.fillStyle = "#111827";
+        this.ctx.fillText("按 ESC 退出游戏", this.canvas.width / 2, buttonY + 70);
 
         this.ctx.restore();
     }
@@ -1312,40 +1564,25 @@ export class Game {
     }
 
     drawBulletIcon(x, y) {
-        this.ctx.save();
+        const icons = this.terrain.mapData.assets?.iconTextures || {};
+        const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoBullet, x, y - 10, 28, 20, {
+            fallback: () => this.drawAmmoBulletFallback(x, y, true)
+        });
 
-        this.ctx.fillStyle = "#cbd5e1";
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - 8);
-        this.ctx.lineTo(x + 18, y - 8);
-        this.ctx.lineTo(x + 26, y);
-        this.ctx.lineTo(x + 18, y + 8);
-        this.ctx.lineTo(x, y + 8);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        this.ctx.strokeStyle = "#f8fafc";
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-
-        this.ctx.restore();
+        if (!drawn) {
+            this.drawAmmoBulletFallback(x, y, true);
+        }
     }
 
     drawShellIcon(x, y) {
-        this.ctx.save();
+        const icons = this.terrain.mapData.assets?.iconTextures || {};
+        const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoShell, x - 11, y - 11, 22, 22, {
+            fallback: () => this.drawAmmoShellFallback(x, y, true)
+        });
 
-        this.ctx.fillStyle = "#facc15";
-
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 11, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        this.ctx.strokeStyle = "#fef3c7";
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-
-        this.ctx.restore();
+        if (!drawn) {
+            this.drawAmmoShellFallback(x, y, true);
+        }
     }
 
     drawWaveCenterInfo(timestamp) {

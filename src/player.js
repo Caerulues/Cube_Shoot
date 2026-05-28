@@ -128,14 +128,48 @@ export class Player {
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.size, this.size);
 
-        ctx.fillStyle = "white";
+        this.drawGun(ctx, this.x, this.y, this.facing);
+    }
 
-        const barrelX = this.facing === 1
-            ? this.x + this.size
-            : this.x - 10;
+    drawGun(ctx, x, y, facing) {
+        const centerY = y + this.size / 2;
+        const gripX = facing === 1 ? x + this.size - 2 : x + 2;
+        const barrelStartX = facing === 1 ? x + this.size - 2 : x + 2;
+        const barrelEndX = facing === 1 ? x + this.size + 19 : x - 19;
 
-        const barrelY = this.y + this.size / 2 - 4;
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
 
-        ctx.fillRect(barrelX, barrelY, 10, 8);
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.moveTo(barrelStartX, centerY - 2);
+        ctx.lineTo(barrelEndX, centerY - 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#f8fafc";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(barrelStartX, centerY - 2);
+        ctx.lineTo(barrelEndX, centerY - 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(gripX, centerY + 1);
+        ctx.lineTo(gripX - facing * 7, centerY + 12);
+        ctx.stroke();
+
+        ctx.fillStyle = "#facc15";
+        ctx.beginPath();
+        ctx.moveTo(barrelEndX + facing * 8, centerY - 2);
+        ctx.lineTo(barrelEndX - facing * 1, centerY - 7);
+        ctx.lineTo(barrelEndX - facing * 1, centerY + 3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
     }
 }

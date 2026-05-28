@@ -1,0 +1,281 @@
+{
+    "name": "Sky Islands",
+    "description": "Platform gaps are kept within the default double-jump reach. Spawn y-values are platform top y-values; Game subtracts player size automatically.",
+    "season": "spring",
+    "worldWidth": 3800,
+    "worldHeight": 1350,
+    "voidY": 1260,
+    "playerStart": {
+        "x": 180,
+        "y": 900
+    },
+    "playerSpawnPoints": [
+        {
+            "id": "mp_a",
+            "x": 180,
+            "y": 900,
+            "enabled": true
+        },
+        {
+            "id": "mp_b",
+            "x": 840,
+            "y": 780,
+            "enabled": true
+        },
+        {
+            "id": "mp_c",
+            "x": 1580,
+            "y": 660,
+            "enabled": true
+        },
+        {
+            "id": "mp_d",
+            "x": 2340,
+            "y": 780,
+            "enabled": true
+        },
+        {
+            "id": "mp_e",
+            "x": 3180,
+            "y": 900,
+            "enabled": true
+        }
+    ],
+    "terrainBlocks": [
+        {
+            "id": "island_1",
+            "x": 90,
+            "y": 900,
+            "width": 520,
+            "height": 90,
+            "type": "grass"
+        },
+        {
+            "id": "island_2",
+            "x": 700,
+            "y": 780,
+            "width": 460,
+            "height": 85,
+            "type": "grass"
+        },
+        {
+            "id": "island_3",
+            "x": 1420,
+            "y": 660,
+            "width": 520,
+            "height": 85,
+            "type": "grass"
+        },
+        {
+            "id": "island_4",
+            "x": 2180,
+            "y": 780,
+            "width": 460,
+            "height": 85,
+            "type": "grass"
+        },
+        {
+            "id": "island_5",
+            "x": 2960,
+            "y": 900,
+            "width": 600,
+            "height": 90,
+            "type": "grass"
+        },
+        {
+            "id": "hop_1",
+            "x": 520,
+            "y": 735,
+            "width": 160,
+            "height": 30,
+            "type": "stone_brick"
+        },
+        {
+            "id": "hop_2",
+            "x": 1190,
+            "y": 635,
+            "width": 160,
+            "height": 30,
+            "type": "stone_brick"
+        },
+        {
+            "id": "hop_3",
+            "x": 1960,
+            "y": 635,
+            "width": 160,
+            "height": 30,
+            "type": "stone_brick"
+        },
+        {
+            "id": "hop_4",
+            "x": 2640,
+            "y": 735,
+            "width": 160,
+            "height": 30,
+            "type": "stone_brick"
+        },
+        {
+            "id": "upper_1",
+            "x": 950,
+            "y": 560,
+            "width": 180,
+            "height": 30,
+            "type": "solid_dark"
+        },
+        {
+            "id": "upper_2",
+            "x": 2520,
+            "y": 560,
+            "width": 180,
+            "height": 30,
+            "type": "solid_dark"
+        },
+        {
+            "id": "bottom_rescue",
+            "x": 1630,
+            "y": 1070,
+            "width": 380,
+            "height": 45,
+            "type": "solid_dark"
+        }
+    ],
+    "spawnPoints": [
+        {
+            "id": "m_a",
+            "x": 440,
+            "y": 900,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_b",
+            "x": 950,
+            "y": 780,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_c",
+            "x": 1680,
+            "y": 660,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_d",
+            "x": 2380,
+            "y": 780,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_e",
+            "x": 3320,
+            "y": 900,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "boss_sky",
+            "x": 1680,
+            "y": 660,
+            "type": "boss",
+            "enabled": true
+        }
+    ],
+    "backgroundObjects": [
+        {
+            "id": "cloud_1",
+            "type": "cloud",
+            "x": 220,
+            "y": 300,
+            "scale": 1.25,
+            "alpha": 0.8
+        },
+        {
+            "id": "cloud_2",
+            "type": "cloud",
+            "x": 1100,
+            "y": 250,
+            "scale": 0.95,
+            "alpha": 0.7
+        },
+        {
+            "id": "cloud_3",
+            "type": "cloud",
+            "x": 2350,
+            "y": 270,
+            "scale": 1.05,
+            "alpha": 0.72
+        },
+        {
+            "id": "cloud_4",
+            "type": "cloud",
+            "x": 3240,
+            "y": 320,
+            "scale": 0.9,
+            "alpha": 0.65
+        },
+        {
+            "id": "lantern_c",
+            "type": "lantern",
+            "x": 1940,
+            "y": 660,
+            "alpha": 0.85
+        }
+    ],
+    "pickups": [
+        {
+            "id": "bullet_upper_left",
+            "x": 990,
+            "y": 525,
+            "width": 28,
+            "height": 28,
+            "type": "ammo",
+            "enabled": true,
+            "weapon": "bullet",
+            "amount": 40
+        },
+        {
+            "id": "shell_weapon_center",
+            "x": 1690,
+            "y": 625,
+            "width": 28,
+            "height": 28,
+            "type": "weapon",
+            "enabled": true,
+            "weapon": "shell"
+        },
+        {
+            "id": "shell_ammo_upper_right",
+            "x": 2570,
+            "y": 525,
+            "width": 28,
+            "height": 28,
+            "type": "ammo",
+            "enabled": true,
+            "weapon": "shell",
+            "amount": 4
+        },
+        {
+            "id": "health_a",
+            "x": 760,
+            "y": 740,
+            "width": 28,
+            "height": 28,
+            "type": "health",
+            "enabled": true,
+            "amount": 30
+        },
+        {
+            "id": "health_b",
+            "x": 3140,
+            "y": 860,
+            "width": 28,
+            "height": 28,
+            "type": "health",
+            "enabled": true,
+            "amount": 30
+        }
+    ]
+}

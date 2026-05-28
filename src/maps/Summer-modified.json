@@ -4,8 +4,8 @@
     "worldHeight": 1300,
     "voidY": 1180,
     "playerStart": {
-        "x": 180,
-        "y": 430
+        "x": 340,
+        "y": 440
     },
     "terrainBlocks": [
         {
@@ -14,7 +14,9 @@
             "y": 440,
             "width": 280,
             "height": 60,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718174289_6902",
@@ -22,7 +24,9 @@
             "y": 580,
             "width": 340,
             "height": 100,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718199835_5769",
@@ -30,7 +34,9 @@
             "y": 680,
             "width": 40,
             "height": 60,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718211400_3212",
@@ -38,7 +44,9 @@
             "y": 680,
             "width": 340,
             "height": 160,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718244573_2735",
@@ -46,7 +54,9 @@
             "y": 580,
             "width": 240,
             "height": 100,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718267307_5547",
@@ -54,7 +64,9 @@
             "y": 860,
             "width": 240,
             "height": 100,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718274236_7354",
@@ -62,7 +74,9 @@
             "y": 840,
             "width": 220,
             "height": 120,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718281227_220",
@@ -70,7 +84,9 @@
             "y": 960,
             "width": 100,
             "height": 140,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718289356_837",
@@ -78,7 +94,9 @@
             "y": 1100,
             "width": 440,
             "height": 40,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718396983_1518",
@@ -86,7 +104,9 @@
             "y": 1040,
             "width": 140,
             "height": 20,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718405128_5943",
@@ -94,7 +114,9 @@
             "y": 860,
             "width": 100,
             "height": 40,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718410769_9647",
@@ -102,7 +124,9 @@
             "y": 840,
             "width": 340,
             "height": 120,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718434109_9296",
@@ -110,7 +134,9 @@
             "y": 380,
             "width": 580,
             "height": 80,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718448300_3696",
@@ -118,7 +144,9 @@
             "y": 860,
             "width": 240,
             "height": 100,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718452230_31",
@@ -126,7 +154,9 @@
             "y": 840,
             "width": 220,
             "height": 120,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718467950_3019",
@@ -134,7 +164,9 @@
             "y": 380,
             "width": 100,
             "height": 80,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718483437_3037",
@@ -142,7 +174,9 @@
             "y": 580,
             "width": 320,
             "height": 100,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718500096_8525",
@@ -150,7 +184,9 @@
             "y": 440,
             "width": 80,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718506740_4896",
@@ -158,7 +194,9 @@
             "y": 440,
             "width": 80,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718526285_147",
@@ -166,7 +204,9 @@
             "y": 860,
             "width": 320,
             "height": 100,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718543207_896",
@@ -174,7 +214,9 @@
             "y": 580,
             "width": 240,
             "height": 260,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718572892_4070",
@@ -182,7 +224,9 @@
             "y": 840,
             "width": 240,
             "height": 120,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718580572_5244",
@@ -190,7 +234,9 @@
             "y": 1100,
             "width": 280,
             "height": 60,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718594148_2095",
@@ -198,7 +244,9 @@
             "y": 960,
             "width": 160,
             "height": 200,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718609282_8953",
@@ -206,7 +254,9 @@
             "y": 1100,
             "width": 220,
             "height": 60,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718621478_7466",
@@ -214,7 +264,9 @@
             "y": 1040,
             "width": 120,
             "height": 40,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718624763_6253",
@@ -222,7 +274,9 @@
             "y": 880,
             "width": 120,
             "height": 40,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718628903_106",
@@ -230,7 +284,9 @@
             "y": 1140,
             "width": 100,
             "height": 20,
-            "type": "end_stone"
+            "type": "end_stone",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718650249_4867",
@@ -238,7 +294,9 @@
             "y": 760,
             "width": 60,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718655580_937",
@@ -246,7 +304,9 @@
             "y": 660,
             "width": 40,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718668893_5606",
@@ -254,7 +314,9 @@
             "y": 340,
             "width": 300,
             "height": 80,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718681359_7225",
@@ -262,7 +324,9 @@
             "y": 340,
             "width": 320,
             "height": 280,
-            "type": "grass"
+            "type": "grass",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718696539_7409",
@@ -270,7 +334,9 @@
             "y": 620,
             "width": 180,
             "height": 280,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779718729210_3160",
@@ -278,7 +344,9 @@
             "y": 760,
             "width": 360,
             "height": 140,
-            "type": "stone_brick"
+            "type": "stone_brick",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723433822_2956",
@@ -286,7 +354,9 @@
             "y": 660,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723442280_1329",
@@ -294,7 +364,9 @@
             "y": 660,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723449167_7015",
@@ -302,7 +374,9 @@
             "y": 400,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723458324_9186",
@@ -310,7 +384,9 @@
             "y": 640,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723461708_6022",
@@ -318,7 +394,9 @@
             "y": 500,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         },
         {
             "id": "terrain_1779723465640_835",
@@ -326,7 +404,9 @@
             "y": 340,
             "width": 100,
             "height": 20,
-            "type": "dirt"
+            "type": "dirt",
+            "textureId": "",
+            "textureMode": "repeat"
         }
     ],
     "spawnPoints": [
@@ -426,7 +506,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779718321546_2640",
@@ -437,7 +518,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779718323288_1309",
@@ -448,7 +530,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779718337838_4716",
@@ -459,7 +542,8 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779718339428_4580",
@@ -470,7 +554,8 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779718340913_7390",
@@ -481,7 +566,8 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_weapon_1779720091371_4968",
@@ -492,7 +578,8 @@
             "type": "weapon",
             "weapon": "shell",
             "enabled": true,
-            "amount": 1
+            "amount": 1,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_weapon_1779720117952_6788",
@@ -503,7 +590,8 @@
             "type": "weapon",
             "weapon": "shell",
             "enabled": true,
-            "amount": 1
+            "amount": 1,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779720127567_2622",
@@ -514,7 +602,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779720131804_8138",
@@ -525,7 +614,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779720134519_2147",
@@ -536,7 +626,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_shell_ammo_1779720135877_2555",
@@ -547,7 +638,8 @@
             "type": "ammo",
             "weapon": "shell",
             "amount": 4,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779720145156_6089",
@@ -558,7 +650,8 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779720146766_9993",
@@ -569,7 +662,8 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
-            "enabled": true
+            "enabled": true,
+            "textureId": ""
         },
         {
             "id": "pickup_bullet_ammo_1779720148312_3469",
@@ -580,7 +674,130 @@
             "type": "ammo",
             "weapon": "bullet",
             "amount": 30,
+            "enabled": true,
+            "textureId": ""
+        }
+    ],
+    "playerSpawnPoints": [
+        {
+            "id": "player_spawn_multiplayer_1779802264882_8665",
+            "x": 1260,
+            "y": 380,
+            "enabled": true
+        },
+        {
+            "id": "player_spawn_multiplayer_1779802266779_9121",
+            "x": 1860,
+            "y": 580,
+            "enabled": true
+        },
+        {
+            "id": "player_spawn_multiplayer_1779802268498_9388",
+            "x": 2280,
+            "y": 340,
+            "enabled": true
+        },
+        {
+            "id": "player_spawn_multiplayer_1779802277909_4530",
+            "x": 300,
+            "y": 580,
+            "enabled": true
+        },
+        {
+            "id": "player_spawn_multiplayer_1779802284262_4154",
+            "x": 2620,
+            "y": 340,
+            "enabled": true
+        },
+        {
+            "id": "player_spawn_multiplayer_1779802293696_7173",
+            "x": 280,
+            "y": 440,
             "enabled": true
         }
-    ]
-};
+    ],
+    "assets": {
+        "textures": [
+            {
+                "id": "ui_heart_full",
+                "name": "HUD Heart Full",
+                "kind": "ui",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22%23ef4444%22%20stroke%3D%22%23fecaca%22%20stroke-width%3D%224%22%20d%3D%22M32%2056C17%2043%208%2035%208%2023%208%2014%2014%208%2022%208c5%200%209%203%2010%207%201-4%205-7%2010-7%208%200%2014%206%2014%2015%200%2012-9%2020-24%2033z%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "ui_heart_empty",
+                "name": "HUD Heart Empty",
+                "kind": "ui",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22rgba(239%2C68%2C68%2C0.22)%22%20stroke%3D%22rgba(254%2C202%2C202%2C0.55)%22%20stroke-width%3D%224%22%20d%3D%22M32%2056C17%2043%208%2035%208%2023%208%2014%2014%208%2022%208c5%200%209%203%2010%207%201-4%205-7%2010-7%208%200%2014%206%2014%2015%200%2012-9%2020-24%2033z%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "ui_ammo_bullet",
+                "name": "HUD Bullet",
+                "kind": "ui",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2032%22%3E%3Cpath%20fill%3D%22%23cbd5e1%22%20stroke%3D%22%23f8fafc%22%20stroke-width%3D%223%22%20d%3D%22M5%207h40l14%209-14%209H5z%22%2F%3E%3Cpath%20stroke%3D%22%2364748b%22%20stroke-width%3D%223%22%20d%3D%22M15%207v18%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "ui_ammo_shell",
+                "name": "HUD Shell",
+                "kind": "ui",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2225%22%20fill%3D%22%23facc15%22%20stroke%3D%22%23fef3c7%22%20stroke-width%3D%224%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2223%22%20r%3D%227%22%20fill%3D%22%23fde68a%22%20opacity%3D%22.75%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "pickup_health",
+                "name": "Health Pickup",
+                "kind": "pickup",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20fill%3D%22%23ef4444%22%20stroke%3D%22%23fecaca%22%20stroke-width%3D%224%22%20d%3D%22M32%2056C17%2043%208%2035%208%2023%208%2014%2014%208%2022%208c5%200%209%203%2010%207%201-4%205-7%2010-7%208%200%2014%206%2014%2015%200%2012-9%2020-24%2033z%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "pickup_bullet_ammo",
+                "name": "Bullet Ammo Pickup",
+                "kind": "pickup",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2040%22%3E%3Cpath%20fill%3D%22%23cbd5e1%22%20stroke%3D%22%23f8fafc%22%20stroke-width%3D%224%22%20d%3D%22M4%2010h42l14%2010-14%2010H4z%22%2F%3E%3Cpath%20stroke%3D%22%2364748b%22%20stroke-width%3D%223%22%20d%3D%22M15%2010v20%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "pickup_shell_ammo",
+                "name": "Shell Ammo Pickup",
+                "kind": "pickup",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2226%22%20fill%3D%22%23fb923c%22%20stroke%3D%22%23fed7aa%22%20stroke-width%3D%224%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2222%22%20r%3D%228%22%20fill%3D%22%23ffedd5%22%20opacity%3D%22.45%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "pickup_shell_weapon",
+                "name": "Shell Weapon Pickup",
+                "kind": "pickup",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2080%2048%22%3E%3Crect%20x%3D%227%22%20y%3D%2218%22%20width%3D%2254%22%20height%3D%2218%22%20rx%3D%225%22%20fill%3D%22%231f2937%22%20stroke%3D%22%23f8fafc%22%20stroke-width%3D%223%22%2F%3E%3Crect%20x%3D%2258%22%20y%3D%2221%22%20width%3D%2216%22%20height%3D%2212%22%20fill%3D%22%23f8fafc%22%2F%3E%3Ccircle%20cx%3D%2228%22%20cy%3D%2227%22%20r%3D%227%22%20fill%3D%22%23f97316%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "terrain_grass_tile",
+                "name": "Grass Tile",
+                "kind": "terrain",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23795039%22%2F%3E%3Crect%20width%3D%2264%22%20height%3D%2216%22%20fill%3D%22%235ca547%22%2F%3E%3Cpath%20fill%3D%22%236fc35a%22%20d%3D%22M0%2016l8%208%208-8%208%208%208-8%208%208%208-8%208%208%208-8v-16H0z%22%2F%3E%3Ccircle%20cx%3D%2214%22%20cy%3D%2238%22%20r%3D%226%22%20fill%3D%22%237b4d34%22%20opacity%3D%22.5%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%2250%22%20r%3D%228%22%20fill%3D%22%237b4d34%22%20opacity%3D%22.35%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            },
+            {
+                "id": "terrain_stone_brick_tile",
+                "name": "Stone Brick Tile",
+                "kind": "terrain",
+                "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2296%22%20height%3D%2248%22%20viewBox%3D%220%200%2096%2048%22%3E%3Crect%20width%3D%2296%22%20height%3D%2248%22%20fill%3D%22%2364748b%22%2F%3E%3Cpath%20d%3D%22M0%2024h96M48%200v24M24%2024v24M72%2024v24%22%20stroke%3D%22%231f2937%22%20stroke-width%3D%223%22%20opacity%3D%22.45%22%2F%3E%3C%2Fsvg%3E",
+                "builtin": true
+            }
+        ],
+        "iconTextures": {
+            "heartFull": "ui_heart_full",
+            "heartEmpty": "ui_heart_empty",
+            "ammoBullet": "ui_ammo_bullet",
+            "ammoShell": "ui_ammo_shell",
+            "pickupHealth": "pickup_health",
+            "pickupBulletAmmo": "pickup_bullet_ammo",
+            "pickupShellAmmo": "pickup_shell_ammo",
+            "pickupShellWeapon": "pickup_shell_weapon"
+        }
+    }
+}

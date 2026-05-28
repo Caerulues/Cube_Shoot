@@ -1,0 +1,266 @@
+{
+    "name": "Fort Arena",
+    "description": "Platform gaps are kept within the default double-jump reach. Spawn y-values are platform top y-values; Game subtracts player size automatically.",
+    "season": "winter",
+    "worldWidth": 3200,
+    "worldHeight": 1250,
+    "voidY": 1160,
+    "playerStart": {
+        "x": 180,
+        "y": 860
+    },
+    "playerSpawnPoints": [
+        {
+            "id": "mp_left_wall",
+            "x": 180,
+            "y": 860,
+            "enabled": true
+        },
+        {
+            "id": "mp_left_tower",
+            "x": 760,
+            "y": 650,
+            "enabled": true
+        },
+        {
+            "id": "mp_mid",
+            "x": 1540,
+            "y": 770,
+            "enabled": true
+        },
+        {
+            "id": "mp_right_tower",
+            "x": 2380,
+            "y": 650,
+            "enabled": true
+        },
+        {
+            "id": "mp_right_wall",
+            "x": 2940,
+            "y": 860,
+            "enabled": true
+        }
+    ],
+    "terrainBlocks": [
+        {
+            "id": "left_wall",
+            "x": 80,
+            "y": 860,
+            "width": 520,
+            "height": 95,
+            "type": "end_stone_dark"
+        },
+        {
+            "id": "left_tower",
+            "x": 680,
+            "y": 650,
+            "width": 360,
+            "height": 90,
+            "type": "stone_brick"
+        },
+        {
+            "id": "mid_floor",
+            "x": 1160,
+            "y": 770,
+            "width": 840,
+            "height": 95,
+            "type": "grass"
+        },
+        {
+            "id": "right_tower",
+            "x": 2160,
+            "y": 650,
+            "width": 360,
+            "height": 90,
+            "type": "stone_brick"
+        },
+        {
+            "id": "right_wall",
+            "x": 2600,
+            "y": 860,
+            "width": 520,
+            "height": 95,
+            "type": "end_stone_dark"
+        },
+        {
+            "id": "left_battlement",
+            "x": 470,
+            "y": 720,
+            "width": 160,
+            "height": 35,
+            "type": "solid_dark"
+        },
+        {
+            "id": "mid_battlement_1",
+            "x": 1120,
+            "y": 610,
+            "width": 200,
+            "height": 35,
+            "type": "solid_dark"
+        },
+        {
+            "id": "mid_battlement_2",
+            "x": 1880,
+            "y": 610,
+            "width": 200,
+            "height": 35,
+            "type": "solid_dark"
+        },
+        {
+            "id": "right_battlement",
+            "x": 2540,
+            "y": 720,
+            "width": 160,
+            "height": 35,
+            "type": "solid_dark"
+        },
+        {
+            "id": "basement_safe",
+            "x": 1260,
+            "y": 1010,
+            "width": 700,
+            "height": 45,
+            "type": "stone_brick"
+        }
+    ],
+    "spawnPoints": [
+        {
+            "id": "m_left",
+            "x": 420,
+            "y": 860,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_ltower",
+            "x": 850,
+            "y": 650,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_mid",
+            "x": 1560,
+            "y": 770,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_rtower",
+            "x": 2320,
+            "y": 650,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "m_right",
+            "x": 2860,
+            "y": 860,
+            "type": "normal",
+            "enabled": true
+        },
+        {
+            "id": "boss_mid",
+            "x": 1560,
+            "y": 770,
+            "type": "boss",
+            "enabled": true
+        }
+    ],
+    "backgroundObjects": [
+        {
+            "id": "cloud_w1",
+            "type": "cloud",
+            "x": 320,
+            "y": 260,
+            "scale": 0.8,
+            "alpha": 0.5
+        },
+        {
+            "id": "cloud_w2",
+            "type": "cloud",
+            "x": 2350,
+            "y": 240,
+            "scale": 0.9,
+            "alpha": 0.48
+        },
+        {
+            "id": "fence_mid",
+            "type": "fence",
+            "x": 1340,
+            "y": 770,
+            "width": 330,
+            "height": 180,
+            "postGap": 42,
+            "alpha": 0.35
+        },
+        {
+            "id": "lantern_l",
+            "type": "lantern",
+            "x": 1040,
+            "y": 650,
+            "alpha": 0.9
+        },
+        {
+            "id": "lantern_r",
+            "type": "lantern",
+            "x": 2160,
+            "y": 650,
+            "alpha": 0.9
+        }
+    ],
+    "pickups": [
+        {
+            "id": "bullet_left_wall",
+            "x": 500,
+            "y": 690,
+            "width": 28,
+            "height": 28,
+            "type": "ammo",
+            "enabled": true,
+            "weapon": "bullet",
+            "amount": 40
+        },
+        {
+            "id": "shell_weapon_center",
+            "x": 1560,
+            "y": 735,
+            "width": 28,
+            "height": 28,
+            "type": "weapon",
+            "enabled": true,
+            "weapon": "shell"
+        },
+        {
+            "id": "shell_ammo_right_wall",
+            "x": 2600,
+            "y": 690,
+            "width": 28,
+            "height": 28,
+            "type": "ammo",
+            "enabled": true,
+            "weapon": "shell",
+            "amount": 5
+        },
+        {
+            "id": "health_left",
+            "x": 730,
+            "y": 610,
+            "width": 28,
+            "height": 28,
+            "type": "health",
+            "enabled": true,
+            "amount": 25
+        },
+        {
+            "id": "health_right",
+            "x": 2380,
+            "y": 610,
+            "width": 28,
+            "height": 28,
+            "type": "health",
+            "enabled": true,
+            "amount": 25
+        }
+    ]
+}

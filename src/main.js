@@ -116,7 +116,7 @@ singleMapSelect.addEventListener("change", () => {
     chooseSingleMapFileButton.classList.toggle("hidden", !upload);
 
     if (!upload) {
-        singleMapStatus.textContent = "当前：默认地图";
+        singleMapStatus.textContent = `当前：${selectedMapLabel(singleMapSelect)}`;
     }
 });
 
@@ -125,7 +125,7 @@ createMapSelect.addEventListener("change", () => {
     chooseCreateMapFileButton.classList.toggle("hidden", !upload);
 
     if (!upload) {
-        createMapStatus.textContent = "当前：默认地图";
+        createMapStatus.textContent = `当前：${selectedMapLabel(createMapSelect)}`;
     }
 });
 
@@ -145,10 +145,8 @@ createMapInput.addEventListener("change", async () => {
     createUploadedMap = await readMapFile(createMapInput.files?.[0], createMapStatus);
 });
 
-startSinglePlayerButton.addEventListener("click", () => {
-    const mapData = singleMapSelect.value === "upload"
-        ? singleUploadedMap
-        : structuredClone(defaultMap);
+startSinglePlayerButton.addEventListener("click", async () => {
+    const mapData = await resolveSelectedMap(singleMapSelect, singleUploadedMap, singleMapStatus);
 
     if (!mapData) {
         singleMapStatus.textContent = "请先选择有效地图文件。";
@@ -158,11 +156,9 @@ startSinglePlayerButton.addEventListener("click", () => {
     startSinglePlayer(mapData);
 });
 
-createRoomButton.addEventListener("click", () => {
+createRoomButton.addEventListener("click", async () => {
     const playerName = createPlayerNameInput.value.trim() || "Player";
-    const mapData = createMapSelect.value === "upload"
-        ? createUploadedMap
-        : structuredClone(defaultMap);
+    const mapData = await resolveSelectedMap(createMapSelect, createUploadedMap, createMapStatus);
 
     if (!mapData) {
         createMapStatus.textContent = "请先选择有效地图文件。";
@@ -346,7 +342,13 @@ function showPanel(name) {
 function getMapEditorUi() {
     return {
         tool: document.getElementById("editorToolSelect"),
+        spawnMode: document.getElementById("editorSpawnModeSelect"),
         material: document.getElementById("editorMaterialSelect"),
+        texture: document.getElementById("editorTextureSelect"),
+        addTexture: document.getElementById("editorAddTextureButton"),
+        textureInput: document.getElementById("editorTextureInput"),
+        iconSlot: document.getElementById("editorIconSlotSelect"),
+        applyIconTexture: document.getElementById("editorApplyIconTextureButton"),
         blockWidth: document.getElementById("editorBlockWidthInput"),
         blockHeight: document.getElementById("editorBlockHeightInput"),
         season: document.getElementById("editorSeasonSelect"),
@@ -383,6 +385,35 @@ function closeMapEditor() {
     showPanel("main");
 }
 
+function selectedMapLabel(select) {
+    return select.options[select.selectedIndex]?.textContent || "默认地图";
+}
+
+async function resolveSelectedMap(select, uploadedMap, statusElement) {
+    if (select.value === "upload") {
+        return uploadedMap;
+    }
+
+    if (select.value === "default") {
+        return structuredClone(defaultMap);
+    }
+
+    try {
+        statusElement.textContent = `正在载入：${selectedMapLabel(select)}...`;
+        const response = await fetch(select.value);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const mapData = await response.json();
+        statusElement.textContent = `当前：${selectedMapLabel(select)}`;
+        return mapData;
+    } catch (error) {
+        console.error("Failed to load built-in map:", error);
+        statusElement.textContent = "内置地图载入失败，请检查是否通过本地服务器运行。";
+        return null;
+    }
+}
+
 async function readMapFile(file, statusElement) {
     if (!file) {
         return null;
@@ -406,6 +437,7 @@ async function readMapFile(file, statusElement) {
 
         data.pickups ||= [];
         data.spawnPoints ||= [];
+        data.playerSpawnPoints ||= [];
         data.backgroundObjects ||= [];
         data.season ||= settings.season;
 

@@ -35,6 +35,11 @@
             地图
             <select id="singleMapSelect">
                 <option value="default">默认地图</option>
+                <option value="src/maps/Training_Yard.json">Training Yard</option>
+                <option value="src/maps/Stone_Bridges.json">Stone Bridges</option>
+                <option value="src/maps/Sky_Islands.json">Sky Islands</option>
+                <option value="src/maps/Canyon_Steps.json">Canyon Steps</option>
+                <option value="src/maps/Fort_Arena.json">Fort Arena</option>
                 <option value="upload">上传地图</option>
             </select>
         </label>
@@ -60,6 +65,11 @@
             地图
             <select id="createMapSelect">
                 <option value="default">默认地图</option>
+                <option value="src/maps/Training_Yard.json">Training Yard</option>
+                <option value="src/maps/Stone_Bridges.json">Stone Bridges</option>
+                <option value="src/maps/Sky_Islands.json">Sky Islands</option>
+                <option value="src/maps/Canyon_Steps.json">Canyon Steps</option>
+                <option value="src/maps/Fort_Arena.json">Fort Arena</option>
                 <option value="upload">上传地图</option>
             </select>
         </label>
@@ -138,18 +148,30 @@
             <div class="map-editor-title">地图编辑器</div>
 
             <label>
+                生成点模式
+                <select id="editorSpawnModeSelect">
+                    <option value="single_monster">单人：Monster 生成点</option>
+                    <option value="multiplayer_player">多人：玩家生成点</option>
+                </select>
+            </label>
+
+            <label>
                 工具
                 <select id="editorToolSelect">
                     <option value="terrain">地形方块</option>
-                    <option value="player_start">玩家出生点</option>
+                    <option value="player_start">单人玩家出生点</option>
                     <option value="spawn_normal">普通敌人生成点</option>
                     <option value="spawn_boss">Boss 生成点</option>
+                    <option value="player_spawn_multiplayer">多人玩家生成点</option>
                     <option value="pickup_shell_weapon">炮弹武器拾取</option>
                     <option value="pickup_shell_ammo">炮弹弹药拾取</option>
+                    <option value="pickup_bullet_ammo">子弹弹药拾取</option>
+                    <option value="pickup_health">回血道具拾取</option>
                     <option value="background_cloud">背景云</option>
                     <option value="background_fence">背景栅栏</option>
                     <option value="background_lantern">背景灯笼</option>
                     <option value="background_dripstone">背景水滴石锥</option>
+                    <option value="background_image">自定义背景贴图</option>
                 </select>
             </label>
 
@@ -163,6 +185,31 @@
                     <option value="darkSolid">深色框纯色方块</option>
                 </select>
             </label>
+
+            <label>
+                贴图
+                <select id="editorTextureSelect">
+                    <option value="">默认 / 无贴图</option>
+                </select>
+            </label>
+
+            <button id="editorAddTextureButton">添加贴图</button>
+            <input id="editorTextureInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden />
+
+            <label>
+                图标槽
+                <select id="editorIconSlotSelect">
+                    <option value="pickupHealth">回血道具</option>
+                    <option value="pickupBulletAmmo">子弹道具</option>
+                    <option value="pickupShellAmmo">炮弹道具</option>
+                    <option value="pickupShellWeapon">炮弹枪道具</option>
+                    <option value="heartFull">实心血量</option>
+                    <option value="heartEmpty">空心血量</option>
+                    <option value="ammoBullet">HUD 子弹</option>
+                    <option value="ammoShell">HUD 炮弹</option>
+                </select>
+            </label>
+            <button id="editorApplyIconTextureButton">设为图标</button>
 
             <label>
                 宽
