@@ -1,3 +1,5 @@
+import { CONFIG } from "./config.js";
+
 const PLAYER_TIMEOUT = 6000;
 const DEFAULT_WS_PORT = 8080;
 
@@ -28,6 +30,7 @@ export class MultiplayerClient {
         playerName,
         isHost = false,
         mapData = null,
+        gameType = "brawl",
         wsUrl = getDefaultWebSocketUrl(),
         onReady = null,
         onError = null,
@@ -38,6 +41,7 @@ export class MultiplayerClient {
         this.playerName = playerName?.trim() || "Player";
         this.isHost = isHost;
         this.wsUrl = wsUrl;
+        this.gameType = gameType === "coop" ? "coop" : "brawl";
 
         this.players = new Map();
         this.pendingEvents = [];
@@ -58,7 +62,8 @@ export class MultiplayerClient {
             vx: 0,
             vy: 0,
             facing: 1,
-            hp: 100,
+            hp: this.gameType === "brawl" ? CONFIG.player.hp * 3 : CONFIG.player.hp,
+            maxHp: this.gameType === "brawl" ? CONFIG.player.hp * 3 : CONFIG.player.hp,
             alive: true,
             kills: 0,
             deathIndex: null,
@@ -74,7 +79,8 @@ export class MultiplayerClient {
                     roomId: this.roomId,
                     senderId: this.playerId,
                     player: this.getLocalPlayer(),
-                    mapData: this.mapData
+                    mapData: this.mapData,
+                    gameType: this.gameType
                 });
             } else {
                 this.sendRaw({
@@ -170,6 +176,7 @@ export class MultiplayerClient {
         if (message.type === "roomCreated") {
             this.ready = true;
             this.mapData = message.mapData ? clone(message.mapData) : this.mapData;
+            this.gameType = message.gameType || this.gameType;
             this.loadPlayers(message.players);
             this.mergeDeathOrder(message.deathOrder || []);
             this.onReady?.(this.mapData);
@@ -179,6 +186,7 @@ export class MultiplayerClient {
         if (message.type === "joinSuccess") {
             this.ready = true;
             this.mapData = message.mapData ? clone(message.mapData) : this.mapData;
+            this.gameType = message.gameType || this.gameType;
             this.loadPlayers(message.players);
             this.mergeDeathOrder(message.deathOrder || []);
             this.onReady?.(this.mapData);
@@ -209,6 +217,13 @@ export class MultiplayerClient {
         }
 
         if (message.type === "hitPlayer") {
+            const target = this.players.get(message.targetId);
+
+            if (target) {
+                target.damageCooldown = Math.max(Number(target.damageCooldown || 0), 28);
+                target.hurtUntil = performance.now() + 360;
+            }
+
             if (message.targetId === this.playerId) {
                 this.pendingEvents.push({
                     type: "hit",
@@ -232,6 +247,8 @@ export class MultiplayerClient {
 
         if (message.type === "restartMatch") {
             this.resetMatchState();
+            this.loadPlayers(message.players);
+            this.mergeDeathOrder(message.deathOrder || []);
             this.pendingEvents.push({
                 type: "restartMatch"
             });
@@ -285,6 +302,12 @@ export class MultiplayerClient {
             ...player,
             name: player.name || existing.name || "Player",
             kills: Number(player.kills ?? existing.kills ?? 0),
+            hp: Number(player.hp ?? existing.hp ?? 0),
+            maxHp: Number(player.maxHp ?? existing.maxHp ?? CONFIG.player.hp),
+            damageCooldown: Number(player.damageCooldown ?? existing.damageCooldown ?? 0),
+            hurtUntil: player.damageCooldown > 0
+                ? performance.now() + 220
+                : Number(existing.hurtUntil || 0),
             alive: player.alive !== false,
             deathIndex: player.deathIndex ?? existing.deathIndex ?? null,
             lastSeen: performance.now()
@@ -347,14 +370,47 @@ export class MultiplayerClient {
 
     resetMatchState() {
         this.deathOrder = [];
+        const now = performance.now();
 
         for (const player of this.players.values()) {
             player.alive = true;
-            player.hp = 100;
+            if (this.gameType === "brawl") {
+                player.maxHp = Math.max(player.maxHp || 0, CONFIG.player.hp * 3);
+            } else {
+                player.maxHp = player.maxHp || CONFIG.player.hp;
+            }
+            player.hp = player.maxHp;
             player.kills = 0;
             player.deathIndex = null;
             player.killerId = null;
+            player.lastSeen = now;
         }
+    }
+
+    restoreLocalPlayerAfterRestart(snapshot) {
+        const local = {
+            ...this.getLocalPlayer(),
+            ...snapshot,
+            id: this.playerId,
+            name: this.playerName,
+            alive: true,
+            kills: 0,
+            deathIndex: null,
+            killerId: null,
+            lastSeen: performance.now()
+        };
+
+        if (this.gameType === "brawl") {
+            local.maxHp = Math.max(local.maxHp || 0, CONFIG.player.hp * 3);
+        } else {
+            local.maxHp = local.maxHp || CONFIG.player.hp;
+        }
+        local.hp = local.hp ?? local.maxHp;
+        this.players.set(this.playerId, local);
+        this.broadcast({
+            type: "snapshot",
+            player: local
+        });
     }
 
     sendDeath(killerId = null) {
@@ -442,6 +498,10 @@ export class MultiplayerClient {
     }
 
     isMatchFinished() {
+        if (this.gameType !== "brawl") {
+            return false;
+        }
+
         const players = this.getPlayers();
 
         if (players.length < 2) {

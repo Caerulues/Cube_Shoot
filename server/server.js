@@ -4,6 +4,10 @@ const PORT = Number(process.env.PORT || 8080);
 const wss = new WebSocketServer({ port: PORT });
 const rooms = new Map();
 
+const BASE_PLAYER_HP = 8;
+const BRAWL_HP_MULTIPLIER = 3;
+
+
 function getRoom(roomId) {
     if (!rooms.has(roomId)) {
         rooms.set(roomId, {
@@ -11,7 +15,8 @@ function getRoom(roomId) {
             mapData: null,
             clients: new Map(),
             deathOrder: [],
-            hostId: null
+            hostId: null,
+            gameType: "brawl"
         });
     }
 
@@ -69,6 +74,7 @@ wss.on("connection", (ws) => {
         if (type === "createRoom") {
             const room = getRoom(currentRoomId);
             room.mapData = message.mapData || room.mapData;
+            room.gameType = message.gameType === "coop" ? "coop" : "brawl";
             room.hostId = currentPlayerId;
             room.clients.set(currentPlayerId, {
                 ws,
@@ -79,6 +85,7 @@ wss.on("connection", (ws) => {
                 type: "roomCreated",
                 roomId: currentRoomId,
                 mapData: room.mapData,
+                gameType: room.gameType,
                 players: getPlayers(room),
                 deathOrder: room.deathOrder
             });
@@ -106,6 +113,7 @@ wss.on("connection", (ws) => {
                 type: "joinSuccess",
                 roomId: currentRoomId,
                 mapData: room.mapData,
+                gameType: room.gameType,
                 players: getPlayers(room),
                 deathOrder: room.deathOrder
             });
@@ -156,11 +164,19 @@ wss.on("connection", (ws) => {
                 }
 
                 client.player.alive = true;
-                client.player.hp = 100;
+                if (room.gameType === "brawl") {
+                    client.player.maxHp = Math.max(client.player.maxHp || 0, BASE_PLAYER_HP * BRAWL_HP_MULTIPLIER);
+                } else {
+                    client.player.maxHp = client.player.maxHp || BASE_PLAYER_HP;
+                }
+                client.player.hp = client.player.maxHp;
                 client.player.kills = 0;
                 client.player.deathIndex = null;
                 client.player.killerId = null;
             }
+
+            message.players = getPlayers(room);
+            message.deathOrder = room.deathOrder;
         }
 
         broadcast(currentRoomId, message, ws);

@@ -36,14 +36,16 @@ export class Enemy {
 
         this.visionRange = options.visionRange;
         this.canSeePlayer = false;
+        this.seePlayerFrames = 0;
 
         this.patrolDirection = Math.random() < 0.5 ? -1 : 1;
+        this.patrolJumpCooldown = 70 + Math.random() * 180;
         this.patrolChangeTimer = 80 + Math.random() * 120;
     }
 
     static createNormal(spawnPoint, wave) {
         const hp = 10 + Math.floor(wave / 2);
-        const speed = CONFIG.enemy.baseSpeed + wave * 0.08;
+        const speed = CONFIG.enemy.baseSpeed;
         const canJump = 1;
 
         return new Enemy({
@@ -52,7 +54,7 @@ export class Enemy {
             size: CONFIG.enemy.size,
             speed,
             hp,
-            damage: 7 + Math.floor(wave / 3),
+            damage: 1,
             canJump,
             isBoss: false,
             visionRange: 430 + wave * 12
@@ -66,9 +68,9 @@ export class Enemy {
             x: spawnPoint.x,
             y: spawnPoint.y - size,
             size,
-            speed: CONFIG.boss.baseSpeed + wave * 0.02,
-            hp: 36 + wave * 1.2,
-            damage: 12 + Math.floor(wave / 3),
+            speed: CONFIG.boss.baseSpeed,
+            hp: CONFIG.boss.hp + wave * CONFIG.boss.hpPerWave,
+            damage: 2,
             canJump: false,
             isBoss: true,
             visionRange: 650
@@ -132,6 +134,7 @@ export class Enemy {
 
         if (distance > this.visionRange) {
             this.canSeePlayer = false;
+            this.seePlayerFrames = 0;
             return;
         }
 
@@ -141,6 +144,10 @@ export class Enemy {
             player.centerX,
             player.centerY
         );
+
+        this.seePlayerFrames = this.canSeePlayer
+            ? this.seePlayerFrames + 1
+            : 0;
     }
 
     updateChaseMovement(player) {
@@ -174,6 +181,19 @@ export class Enemy {
 
         this.vx += this.patrolDirection * this.speed * 0.08;
 
+        this.patrolJumpCooldown--;
+        if (
+            this.canJump &&
+            this.onGround &&
+            !this.isBoss &&
+            this.patrolJumpCooldown <= 0 &&
+            Math.random() < 0.035
+        ) {
+            this.vy = -CONFIG.player.jumpPower * (0.58 + Math.random() * 0.22);
+            this.onGround = false;
+            this.patrolJumpCooldown = 90 + Math.random() * 220;
+        }
+
         const patrolMaxSpeed = this.speed * 0.85;
 
         this.vx = Math.max(
@@ -196,6 +216,7 @@ export class Enemy {
             this.onGround &&
             this.jumpCooldown <= 0 &&
             this.canSeePlayer &&
+            this.seePlayerFrames > 35 &&
             (playerIsAbove || closeToPlayer) &&
             !this.isBoss
         ) {

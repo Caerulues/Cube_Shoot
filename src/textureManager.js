@@ -8,7 +8,8 @@ export const DEFAULT_TEXTURE_IDS = {
     pickupHealth: "pickup_health",
     pickupBulletAmmo: "pickup_bullet_ammo",
     pickupShellAmmo: "pickup_shell_ammo",
-    pickupShellWeapon: "pickup_shell_weapon"
+    pickupShellWeapon: "pickup_shell_weapon",
+    pickupLazerWeapon: "pickup_lazer_weapon"
 };
 
 function svgData(svg) {
@@ -63,6 +64,12 @@ export const BUILTIN_TEXTURES = [
         name: "Shell Weapon Pickup",
         kind: "pickup",
         src: svgData(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"><rect x="7" y="18" width="54" height="18" rx="5" fill="#1f2937" stroke="#f8fafc" stroke-width="3"/><rect x="58" y="21" width="16" height="12" fill="#f8fafc"/><circle cx="28" cy="27" r="7" fill="#f97316"/></svg>`)
+    },
+    {
+        id: "pickup_lazer_weapon",
+        name: "Lazer Weapon Pickup",
+        kind: "pickup",
+        src: svgData(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48"><rect x="8" y="17" width="50" height="14" rx="5" fill="#164e63" stroke="#e0f2fe" stroke-width="3"/><rect x="50" y="13" width="18" height="22" rx="4" fill="#22d3ee" stroke="#cffafe" stroke-width="3"/><path d="M12 24h58" stroke="#67e8f9" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="24" r="6" fill="#a5f3fc"/></svg>`)
     },
     {
         id: "terrain_grass_tile",

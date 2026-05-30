@@ -518,6 +518,25 @@ export class MapEditor {
             return;
         }
 
+        if (tool === "pickup_lazer_weapon") {
+            this.mapData.pickups.push({
+                id: createId("pickup_lazer_weapon"),
+                x,
+                y,
+                width: 28,
+                height: 28,
+                type: "weapon",
+                weapon: "lazer",
+                textureId: this.ui.texture?.value || "",
+                enabled: true
+            });
+
+            this.clearSelection();
+            this.saveMap(false);
+            this.setStatus("Lazer weapon pickup added.");
+            return;
+        }
+
         if (tool === "pickup_shell_ammo") {
             this.mapData.pickups.push({
                 id: createId("pickup_shell_ammo"),
@@ -1449,11 +1468,13 @@ export class MapEditor {
             this.ctx.font = `${12 / this.zoom}px Arial`;
 
             const label =
-                pickup.type === "weapon"
-                    ? "Shell Weapon"
-                    : pickup.weapon === "shell"
-                        ? "Shell Ammo"
-                        : "Bullet Ammo";
+                pickup.type === "health"
+                    ? "Health"
+                    : pickup.type === "weapon"
+                        ? (pickup.weapon === "lazer" ? "Lazer Weapon" : "Shell Weapon")
+                        : pickup.weapon === "shell"
+                            ? "Shell Ammo"
+                            : "Bullet Ammo";
 
             this.ctx.fillText(label, pickup.x + pickup.width + 8, pickup.y + 16);
         }

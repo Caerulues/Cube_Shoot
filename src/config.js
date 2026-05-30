@@ -12,7 +12,7 @@ export const CONFIG = {
         speed: 0.85,
         maxSpeed: 5.2,
         jumpPower: 15,
-        hp: 100
+        hp: 8
     },
 
     bullet: {
@@ -20,24 +20,35 @@ export const CONFIG = {
         height: 6,
         speed: 12,
         damage: 18,
+        playerDamage: 1,
         cooldown: 95,
         maxDistance: 520,
 
-        maxAmmo: 100,
-        regenInterval: 850
+        maxAmmo: 16
     },
 
     shell: {
         size: 14,
-        speed: 5.8,
-        jumpPower: 4.8,
+        speed: 8.2,
         damage: 30,
+        playerDamage: 4,
         radius: 95,
         cooldown: 680,
         knockback: 11,
 
-        maxAmmo: 12,
-        regenInterval: 3200
+        maxAmmo: 8
+    },
+
+    lazer: {
+        width: 6,
+        length: 650,
+        damage: 42,
+        playerDamage: 2,
+        cooldown: 520,
+        life: 9,
+        maxBounces: 6,
+
+        maxAmmo: 24
     },
 
     autoFire: {
@@ -52,6 +63,9 @@ export const CONFIG = {
 
     boss: {
         size: 72,
-        baseSpeed: 0.9
+        baseSpeed: 0.9,
+        hp: 180,
+        hpPerWave: 12,
+        shellDamageMultiplier: 0.35
     }
 };

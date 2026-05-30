@@ -560,6 +560,10 @@ export class Terrain {
             return icons.pickupShellWeapon;
         }
 
+        if (pickup.type === "weapon" && pickup.weapon === "lazer") {
+            return icons.pickupLazerWeapon;
+        }
+
         if (pickup.type === "ammo" && pickup.weapon === "shell") {
             return icons.pickupShellAmmo;
         }
@@ -576,6 +580,8 @@ export class Terrain {
             this.drawHealthPickup(ctx, pickup);
         } else if (pickup.type === "weapon" && pickup.weapon === "shell") {
             this.drawShellWeaponPickup(ctx, pickup);
+        } else if (pickup.type === "weapon" && pickup.weapon === "lazer") {
+            this.drawLazerWeaponPickup(ctx, pickup);
         } else if (pickup.type === "ammo" && pickup.weapon === "shell") {
             this.drawShellAmmoPickup(ctx, pickup);
         } else if (pickup.type === "ammo" && pickup.weapon === "bullet") {
@@ -583,6 +589,32 @@ export class Terrain {
         } else {
             this.drawGenericPickup(ctx, pickup);
         }
+    }
+
+    drawLazerWeaponPickup(ctx, pickup) {
+        const cx = pickup.x + pickup.width / 2;
+        const cy = pickup.y + pickup.height / 2;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        ctx.fillStyle = "#22d3ee";
+        ctx.strokeStyle = "#e0f2fe";
+        ctx.lineWidth = 2;
+
+        ctx.fillRect(-12, -5, 24, 10);
+        ctx.strokeRect(-12, -5, 24, 10);
+
+        ctx.fillStyle = "#0e7490";
+        ctx.fillRect(4, -9, 12, 18);
+
+        ctx.strokeStyle = "#67e8f9";
+        ctx.beginPath();
+        ctx.moveTo(-15, 0);
+        ctx.lineTo(18, 0);
+        ctx.stroke();
+
+        ctx.restore();
     }
 
     drawGenericPickup(ctx, pickup) {

@@ -233,6 +233,16 @@ export const defaultMap = {
                     enabled: true
                 },
                 {
+                    id: "pickup_lazer_weapon_1",
+                    x: 1780,
+                    y: 250,
+                    width: 28,
+                    height: 28,
+                    type: "weapon",
+                    weapon: "lazer",
+                    enabled: true
+                },
+                {
                     id: "pickup_shell_ammo_1",
                     x: 920,
                     y: 530,

@@ -9,7 +9,8 @@ export const DEFAULT_SETTINGS = {
         chat: ["t"],
         freeCamera: ["q"],
         weapon1: ["1"],
-        weapon2: ["2"]
+        weapon2: ["2"],
+        weapon3: ["3"]
     },
 
     showHitboxes: false

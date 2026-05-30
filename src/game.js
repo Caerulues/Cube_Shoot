@@ -1,6 +1,6 @@
 import { CONFIG } from "./config.js";
-import { Player } from "./player.js";
-import { Bullet, Shell } from "./projectile.js";
+import { Player, drawWeaponModel } from "./player.js";
+import { Bullet, Shell, Lazer } from "./projectile.js";
 import { Explosion } from "./effects.js";
 import { InputManager } from "./input.js";
 import { WaveManager } from "./waveManager.js";
@@ -26,6 +26,9 @@ export class Game {
         this.mode = options.mode || "single";
         this.multiplayerClient = options.multiplayerClient || null;
         this.isMultiplayer = this.mode === "multiplayer";
+        this.multiplayerType = options.multiplayerType || this.multiplayerClient?.gameType || "brawl";
+        this.isBrawlMultiplayer = this.isMultiplayer && this.multiplayerType === "brawl";
+        this.isCoopMultiplayer = this.isMultiplayer && this.multiplayerType === "coop";
 
         this.settings = settings || {
             season: mapData?.season || "spring",
@@ -56,6 +59,7 @@ export class Game {
 
         this.bullets = [];
         this.shells = [];
+        this.lazers = [];
         this.enemies = [];
         this.effects = [];
 
@@ -91,6 +95,21 @@ export class Game {
 
         this.message = "";
         this.messageEndTime = 0;
+
+        this.applyMultiplayerRules();
+    }
+
+    applyMultiplayerRules() {
+        if (!this.isBrawlMultiplayer) {
+            return;
+        }
+
+        const brawlMaxHp = CONFIG.player.hp * 3;
+        this.player.maxHp = Math.max(this.player.maxHp || 0, brawlMaxHp);
+        this.player.hp = this.player.maxHp;
+
+        this.weaponManager.unlockAllWeapons({ fullAmmo: true, select: "bullet" });
+        this.weaponManager.setInfiniteAmmo(true);
     }
 
     start() {
@@ -185,6 +204,8 @@ export class Game {
 
         this.camera.update(this.player, this.input, this.freeCamera);
 
+        this.updatePlayerAim();
+
         this.handleWeaponSelection();
         this.weaponManager.update(timestamp);
         this.handleWeapons(timestamp);
@@ -198,6 +219,7 @@ export class Game {
         this.updatePickups(timestamp);
 
         this.checkBulletHits();
+        this.checkLazerHits();
         this.checkShellExplosions();
         this.checkEnemyPlayerCollisions();
         this.checkPickups(timestamp);
@@ -223,6 +245,8 @@ export class Game {
 
             this.player.update(playerInput, this.canvas, this.terrain);
 
+            this.updatePlayerAim();
+
             this.handleWeaponSelection();
             this.weaponManager.update(timestamp);
             this.handleWeapons(timestamp);
@@ -231,10 +255,21 @@ export class Game {
         }
 
         this.updateProjectiles();
+
+        if (this.isCoopMultiplayer) {
+            this.waveManager.update(timestamp, this.enemies);
+            this.updateEnemies();
+            this.checkBulletHits();
+            this.checkLazerHits();
+            this.checkShellExplosions();
+            this.checkEnemyPlayerCollisions();
+        } else {
+            this.checkMultiplayerProjectileHits();
+            this.checkShellExplosions();
+        }
+
         this.updateEffects();
         this.updatePickups(timestamp);
-        this.checkMultiplayerProjectileHits();
-        this.checkShellExplosions();
 
         if (this.multiplayerDead || this.spectating) {
             this.updateSpectatorTarget();
@@ -242,9 +277,14 @@ export class Game {
             this.camera.update(this.player, this.input, false);
         }
 
+        if (this.isCoopMultiplayer && !this.multiplayerDead && this.player.hp <= 0) {
+            this.player.hp = 0;
+            this.dieInMultiplayer(this.lastAttackerId);
+        }
+
         this.syncMultiplayerSnapshot(timestamp);
 
-        if (this.multiplayerClient?.isMatchFinished()) {
+        if (this.isBrawlMultiplayer && this.multiplayerClient?.isMatchFinished()) {
             this.multiplayerRankingShown = true;
         }
 
@@ -260,8 +300,14 @@ export class Game {
 
         for (const event of this.multiplayerClient.consumeEvents()) {
             if (event.type === "hit" && !this.multiplayerDead) {
-                this.player.takeDamage(event.damage);
+                const damaged = this.player.takeDamage(event.damage);
+
+                if (!damaged) {
+                    continue;
+                }
+
                 this.lastAttackerId = event.attackerId;
+                this.syncMultiplayerSnapshot(performance.now() + 1000);
 
                 if (this.player.hp <= 0) {
                     this.player.hp = 0;
@@ -293,9 +339,13 @@ export class Game {
             vy: this.player.vy,
             facing: this.player.facing,
             hp: this.player.hp,
+            maxHp: this.player.maxHp,
+            damageCooldown: this.player.damageCooldown,
             alive: !this.multiplayerDead,
             kills: this.multiplayerClient.getLocalPlayer()?.kills || 0,
-            selectedWeapon: this.weaponManager.getSelectedWeapon()?.id || "bullet"
+            selectedWeapon: this.weaponManager.getSelectedWeapon()?.id || "bullet",
+            aimAngle: this.player.aimAngle,
+            aimFlipY: this.player.aimFlipY
         });
     }
 
@@ -369,8 +419,40 @@ export class Game {
         );
     }
 
+    isProjectileTouchingRemotePlayer(projectile, player) {
+        const rect = {
+            x: player.x + 3,
+            y: player.y + 2,
+            width: CONFIG.player.size - 6,
+            height: CONFIG.player.size - 2
+        };
+
+        return (
+            projectile.x < rect.x + rect.width &&
+            projectile.x + projectile.width > rect.x &&
+            projectile.y < rect.y + rect.height &&
+            projectile.y + projectile.height > rect.y
+        );
+    }
+
+    isProjectileTouchingPlayer(projectile, player) {
+        const rect = player.collisionRect || {
+            x: player.x + 3,
+            y: player.y + 2,
+            width: CONFIG.player.size - 6,
+            height: CONFIG.player.size - 2
+        };
+
+        return (
+            projectile.x < rect.x + rect.width &&
+            projectile.x + projectile.width > rect.x &&
+            projectile.y < rect.y + rect.height &&
+            projectile.y + projectile.height > rect.y
+        );
+    }
+
     checkMultiplayerProjectileHits() {
-        if (!this.multiplayerClient) {
+        if (!this.multiplayerClient || !this.isBrawlMultiplayer) {
             return;
         }
 
@@ -382,35 +464,60 @@ export class Game {
             const bullet = this.bullets[bulletIndex];
 
             if (bullet.isRemote) {
+                if (!this.multiplayerDead && this.isProjectileTouchingPlayer(bullet, this.player)) {
+                    this.bullets.splice(bulletIndex, 1);
+                }
                 continue;
             }
 
             for (const player of remotePlayers) {
-                const rect = {
-                    x: player.x + 3,
-                    y: player.y + 2,
-                    width: CONFIG.player.size - 6,
-                    height: CONFIG.player.size - 2
-                };
-
-                const hit =
-                    bullet.x < rect.x + rect.width &&
-                    bullet.x + bullet.width > rect.x &&
-                    bullet.y < rect.y + rect.height &&
-                    bullet.y + bullet.height > rect.y;
+                const hit = this.isProjectileTouchingRemotePlayer(bullet, player);
 
                 if (!hit) {
                     continue;
                 }
 
-                this.multiplayerClient.sendHit(player.id, bullet.damage);
+                this.multiplayerClient.sendHit(player.id, CONFIG.bullet.playerDamage);
                 this.bullets.splice(bulletIndex, 1);
                 break;
             }
         }
 
+        for (let lazerIndex = this.lazers.length - 1; lazerIndex >= 0; lazerIndex--) {
+            const lazer = this.lazers[lazerIndex];
+
+            if (lazer.isRemote) {
+                continue;
+            }
+
+            for (const player of remotePlayers) {
+                if (player.alive === false) {
+                    continue;
+                }
+
+                const rect = {
+                    x: player.x,
+                    y: player.y,
+                    width: CONFIG.player.size,
+                    height: CONFIG.player.size
+                };
+
+                if (
+                    !lazer.hitIds.has(player.id) &&
+                    this.isLazerHittingRect(lazer, rect, CONFIG.lazer.width)
+                ) {
+                    lazer.hitIds.add(player.id);
+                    this.multiplayerClient.sendHit(player.id, CONFIG.lazer.playerDamage);
+                }
+            }
+        }
+
         for (let shellIndex = this.shells.length - 1; shellIndex >= 0; shellIndex--) {
             const shell = this.shells[shellIndex];
+
+            if (!shell.hitPlayerIds) {
+                shell.hitPlayerIds = new Set();
+            }
 
             if (shell.isRemote) {
                 continue;
@@ -421,6 +528,10 @@ export class Game {
             }
 
             for (const player of remotePlayers) {
+                if (shell.hitPlayerIds.has(player.id)) {
+                    continue;
+                }
+
                 const distance = getDistance(
                     shell.centerX,
                     shell.centerY,
@@ -432,9 +543,8 @@ export class Game {
                     continue;
                 }
 
-                const falloff = 1 - distance / shell.radius;
-                const damage = Math.max(1, shell.damage * (0.5 + falloff));
-                this.multiplayerClient.sendHit(player.id, damage);
+                shell.hitPlayerIds.add(player.id);
+                this.multiplayerClient.sendHit(player.id, CONFIG.shell.playerDamage);
             }
         }
     }
@@ -469,14 +579,14 @@ export class Game {
 
         if (command === "help") {
             this.showMessage(
-                "/help | /health <value> | /weapon <shell> | /autoammo | /speedshot | /infiniteammo",
+                "/help | /health <value> | /weapon <shell|lazer> | /speedshot | /infiniteammo",
                 timestamp
             );
             return;
         }
 
         if (command === "health") {
-            const amount = Number(parts[1]);
+            const amount = Math.ceil(Number(parts[1]));
 
             if (!Number.isFinite(amount) || amount <= 0) {
                 this.showMessage("Usage: /health <value>", timestamp);
@@ -489,39 +599,33 @@ export class Game {
                 return;
             }
 
-            this.player.hp += amount;
-            this.showMessage(`Health +${amount} | Cost ${cost}`, timestamp);
+            this.player.maxHp = Math.max(CONFIG.player.hp, Math.ceil(this.player.maxHp || CONFIG.player.hp)) + amount;
+            this.player.hp = Math.min(this.player.maxHp, Math.ceil(this.player.hp || 0) + amount);
+            this.showMessage(`Max health +${amount} | Cost ${cost}`, timestamp);
             return;
         }
 
         if (command === "weapon") {
             const type = parts[1]?.toLowerCase();
 
-            if (type !== "shell") {
-                this.showMessage("Usage: /weapon shell", timestamp);
+            if (type !== "shell" && type !== "lazer") {
+                this.showMessage("Usage: /weapon shell|lazer", timestamp);
                 return;
             }
 
-            const cost = 300;
+            const cost = type === "shell" ? 300 : 450;
 
             if (!this.spendScore(cost, timestamp)) {
                 return;
             }
 
-            this.weaponManager.unlockWeapon("shell");
-            this.showMessage("Unlocked Cannon | Cost 300", timestamp);
+            this.weaponManager.unlockWeapon(type);
+            this.showMessage(`${type === "shell" ? "Unlocked Cannon" : "Unlocked Lazer"} | Cost ${cost}`, timestamp);
             return;
         }
 
         if (command === "autoammo") {
-            const cost = 400;
-
-            if (!this.spendScore(cost, timestamp)) {
-                return;
-            }
-
-            const enabled = this.weaponManager.toggleAutoAmmo();
-            this.showMessage(`Auto fire: ${enabled ? "ON" : "OFF"} | Cost 400`, timestamp);
+            this.showMessage("Auto ammo is disabled. Pick up ammo from the map.", timestamp);
             return;
         }
 
@@ -585,6 +689,10 @@ export class Game {
         if (this.input.wasActionPressed("weapon2")) {
             this.weaponManager.selectWeaponByNumber("2");
         }
+
+        if (this.input.wasActionPressed("weapon3")) {
+            this.weaponManager.selectWeaponByNumber("3");
+        }
     }
 
     handleWeapons(timestamp) {
@@ -606,24 +714,60 @@ export class Game {
             this.fireBullet();
         } else if (weapon.id === "shell") {
             this.fireShell();
+        } else if (weapon.id === "lazer") {
+            this.fireLazer();
         }
 
         this.weaponManager.consumeFire(timestamp);
     }
 
+    getMouseWorldPosition() {
+        return {
+            x: this.input.mouse.x + this.camera.x,
+            y: this.input.mouse.y + this.camera.y
+        };
+    }
+
+    getAimVector() {
+        const mouse = this.getMouseWorldPosition();
+        const dx = mouse.x - this.player.centerX;
+        const dy = mouse.y - this.player.centerY;
+        const length = Math.hypot(dx, dy) || 1;
+
+        return {
+            x: dx / length,
+            y: dy / length
+        };
+    }
+
+    updatePlayerAim() {
+        const aim = this.getAimVector();
+        const rawAngle = Math.atan2(aim.y, aim.x);
+
+        // Keep the weapon barrel aligned with the real player -> mouse vector.
+        // The old 0..PI mirroring made lower-half aiming draw upward because
+        // ctx.scale(1, -1) does not change the rotated local x-axis direction.
+        // Use the real signed angle for rotation, and only flip the model's
+        // local Y axis when aiming left so the sprite does not render upside down.
+        this.player.aimAngle = rawAngle;
+        this.player.aimFlipY = rawAngle > Math.PI / 2 || rawAngle < -Math.PI / 2;
+        this.player.facing = aim.x >= 0 ? 1 : -1;
+    }
+
+    getMuzzlePosition(width, height) {
+        const aim = this.getAimVector();
+        const offset = this.player.size / 2 + 10;
+
+        return {
+            x: this.player.centerX + aim.x * offset - width / 2,
+            y: this.player.centerY + aim.y * offset - height / 2,
+            aim
+        };
+    }
+
     fireBullet() {
-        const direction = this.player.facing;
-
-        const x = direction === 1
-            ? this.player.x + this.player.size
-            : this.player.x - CONFIG.bullet.width;
-
-        const y =
-            this.player.y +
-            this.player.size / 2 -
-            CONFIG.bullet.height / 2;
-
-        const bullet = new Bullet(x, y, direction);
+        const muzzle = this.getMuzzlePosition(CONFIG.bullet.width, CONFIG.bullet.height);
+        const bullet = new Bullet(muzzle.x, muzzle.y, muzzle.aim);
         bullet.ownerId = this.multiplayerClient?.playerId || "local";
         bullet.isRemote = false;
         this.bullets.push(bullet);
@@ -631,26 +775,16 @@ export class Game {
         if (this.isMultiplayer) {
             this.multiplayerClient?.sendProjectile({
                 kind: "bullet",
-                x,
-                y,
-                direction
+                x: muzzle.x,
+                y: muzzle.y,
+                aim: muzzle.aim
             });
         }
     }
 
     fireShell() {
-        const direction = this.player.facing;
-
-        const x = direction === 1
-            ? this.player.x + this.player.size
-            : this.player.x - CONFIG.shell.size;
-
-        const y =
-            this.player.y +
-            this.player.size / 2 -
-            CONFIG.shell.size / 2;
-
-        const shell = new Shell(x, y, direction);
+        const muzzle = this.getMuzzlePosition(CONFIG.shell.size, CONFIG.shell.size);
+        const shell = new Shell(muzzle.x, muzzle.y, muzzle.aim);
         shell.ownerId = this.multiplayerClient?.playerId || "local";
         shell.isRemote = false;
         this.shells.push(shell);
@@ -658,9 +792,26 @@ export class Game {
         if (this.isMultiplayer) {
             this.multiplayerClient?.sendProjectile({
                 kind: "shell",
-                x,
-                y,
-                direction
+                x: muzzle.x,
+                y: muzzle.y,
+                aim: muzzle.aim
+            });
+        }
+    }
+
+    fireLazer() {
+        const muzzle = this.getMuzzlePosition(1, 1);
+        const lazer = new Lazer(muzzle.x, muzzle.y, muzzle.aim);
+        lazer.ownerId = this.multiplayerClient?.playerId || "local";
+        lazer.isRemote = false;
+        this.lazers.push(lazer);
+
+        if (this.isMultiplayer) {
+            this.multiplayerClient?.sendProjectile({
+                kind: "lazer",
+                x: muzzle.x,
+                y: muzzle.y,
+                aim: muzzle.aim
             });
         }
     }
@@ -671,7 +822,7 @@ export class Game {
         }
 
         if (projectile.kind === "bullet") {
-            const bullet = new Bullet(projectile.x, projectile.y, projectile.direction);
+            const bullet = new Bullet(projectile.x, projectile.y, projectile.aim || projectile.direction);
             bullet.ownerId = ownerId;
             bullet.isRemote = true;
             this.bullets.push(bullet);
@@ -679,10 +830,18 @@ export class Game {
         }
 
         if (projectile.kind === "shell") {
-            const shell = new Shell(projectile.x, projectile.y, projectile.direction);
+            const shell = new Shell(projectile.x, projectile.y, projectile.aim || projectile.direction);
             shell.ownerId = ownerId;
             shell.isRemote = true;
             this.shells.push(shell);
+            return;
+        }
+
+        if (projectile.kind === "lazer") {
+            const lazer = new Lazer(projectile.x, projectile.y, projectile.aim || projectile.direction);
+            lazer.ownerId = ownerId;
+            lazer.isRemote = true;
+            this.lazers.push(lazer);
         }
     }
 
@@ -693,6 +852,10 @@ export class Game {
 
         for (const shell of this.shells) {
             shell.update(this.terrain);
+        }
+
+        for (const lazer of this.lazers) {
+            lazer.update(this.terrain);
         }
 
         this.bullets = this.bullets.filter((bullet) => {
@@ -710,6 +873,8 @@ export class Game {
                 shell.y < this.terrain.voidY + 100
             );
         });
+
+        this.lazers = this.lazers.filter((lazer) => lazer.active);
     }
 
     updateEnemies() {
@@ -742,6 +907,71 @@ export class Game {
                     }
 
                     break;
+                }
+            }
+        }
+    }
+
+    isLineHittingRect(x1, y1, x2, y2, rect, padding = 0) {
+        const left = rect.x - padding;
+        const right = rect.x + rect.width + padding;
+        const top = rect.y - padding;
+        const bottom = rect.y + rect.height + padding;
+        const steps = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 10));
+
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = x1 + (x2 - x1) * t;
+            const y = y1 + (y2 - y1) * t;
+
+            if (x >= left && x <= right && y >= top && y <= bottom) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    isLazerHittingRect(lazer, rect, padding = 0) {
+        const segments = lazer.segments?.length
+            ? lazer.segments
+            : [{ x1: lazer.x, y1: lazer.y, x2: lazer.endX, y2: lazer.endY }];
+
+        return segments.some((segment) => {
+            return this.isLineHittingRect(
+                segment.x1,
+                segment.y1,
+                segment.x2,
+                segment.y2,
+                rect,
+                padding
+            );
+        });
+    }
+
+    checkLazerHits() {
+        for (const lazer of this.lazers) {
+            if (lazer.isRemote) {
+                continue;
+            }
+
+            for (let enemyIndex = this.enemies.length - 1; enemyIndex >= 0; enemyIndex--) {
+                const enemy = this.enemies[enemyIndex];
+                const rect = enemy.collisionRect;
+
+                if (!this.isLazerHittingRect(lazer, rect, CONFIG.lazer.width)) {
+                    continue;
+                }
+
+                if (lazer.hitIds.has(enemy.id || enemyIndex)) {
+                    continue;
+                }
+
+                lazer.hitIds.add(enemy.id || enemyIndex);
+                enemy.takeDamage(lazer.damage, 4, lazer.x);
+
+                if (enemy.hp <= 0) {
+                    this.killEnemy(enemyIndex, enemy);
                 }
             }
         }
@@ -804,7 +1034,8 @@ export class Game {
             }
 
             const falloff = 1 - distance / shell.radius;
-            const damage = Math.max(1, shell.damage * (0.5 + falloff));
+            const damageMultiplier = enemy.isBoss ? CONFIG.boss.shellDamageMultiplier : 1;
+            const damage = Math.max(1, shell.damage * (0.5 + falloff) * damageMultiplier);
             const knockback = CONFIG.shell.knockback * (0.4 + falloff);
 
             enemy.takeDamage(damage, knockback, shell.centerX);
@@ -822,7 +1053,7 @@ export class Game {
             }
 
             this.resolvePlayerEnemyOverlap(enemy);
-            this.player.takeDamage(enemy.damage);
+            this.player.takeDamage(enemy.damage, { useCooldown: true });
         }
     }
 
@@ -921,9 +1152,11 @@ export class Game {
                 this.weaponManager.addAmmo(pickup.weapon, pickup.amount);
                 this.showMessage(`Picked up ${pickup.weapon} ammo +${pickup.amount}`, timestamp);
             } else if (pickup.type === "health") {
-                const amount = pickup.amount || 25;
-                const maxHp = CONFIG.player.hp;
-                this.player.hp = Math.min(maxHp, this.player.hp + amount);
+                const rawAmount = Number(pickup.amount || 1);
+                const amount = rawAmount > CONFIG.player.hp ? 1 : Math.max(1, Math.ceil(rawAmount));
+                const maxHp = Math.max(CONFIG.player.hp, Math.ceil(this.player.maxHp || CONFIG.player.hp));
+                this.player.maxHp = maxHp;
+                this.player.hp = Math.min(maxHp, Math.ceil(this.player.hp || 0) + amount);
                 this.showMessage(`Picked up health +${amount}`, timestamp);
             }
         }
@@ -973,12 +1206,15 @@ export class Game {
         const start = this.getInitialPlayerStart();
         this.player = new Player(start.x, start.y - CONFIG.player.size);
 
+        this.applyMultiplayerRules();
+
         for (const pickup of this.terrain.pickups) {
             pickup.enabled = true;
         }
 
         this.bullets = [];
         this.shells = [];
+        this.lazers = [];
         this.enemies = [];
         this.effects = [];
 
@@ -1008,12 +1244,27 @@ export class Game {
         }
 
         this.restart();
+        this.lastMultiplayerSyncTime = -Infinity;
 
         if (shouldBroadcast) {
             this.multiplayerClient?.sendRestartMatch();
         } else {
             this.multiplayerClient?.resetMatchState();
         }
+
+        this.multiplayerClient?.restoreLocalPlayerAfterRestart({
+            x: this.player.x,
+            y: this.player.y,
+            vx: this.player.vx,
+            vy: this.player.vy,
+            facing: this.player.facing,
+            hp: this.player.hp,
+            maxHp: this.player.maxHp,
+            alive: true,
+            selectedWeapon: this.weaponManager.getSelectedWeapon()?.id || "bullet",
+            aimAngle: this.player.aimAngle,
+            aimFlipY: this.player.aimFlipY
+        });
 
         this.syncMultiplayerSnapshot(performance.now() + 1000);
     }
@@ -1062,6 +1313,10 @@ export class Game {
             shell.draw(this.ctx);
         }
 
+        for (const lazer of this.lazers) {
+            lazer.draw(this.ctx);
+        }
+
         if (!this.isMultiplayer) {
             for (const enemy of this.enemies) {
                 enemy.draw(this.ctx);
@@ -1069,7 +1324,8 @@ export class Game {
         }
 
         this.drawRemotePlayers();
-        this.player.draw(this.ctx);
+        this.player.draw(this.ctx, this.weaponManager.getSelectedWeapon()?.id || "bullet");
+        this.drawLocalPlayerOverheadInfo();
 
         if (this.settings.showHitboxes) {
             this.drawHitboxes();
@@ -1112,8 +1368,10 @@ export class Game {
 
             this.ctx.save();
 
+            const hurtSynced = Number(remote.damageCooldown || 0) > 0 || Number(remote.hurtUntil || 0) > performance.now();
+
             this.ctx.globalAlpha = 0.92;
-            this.ctx.fillStyle = "#a78bfa";
+            this.ctx.fillStyle = hurtSynced ? "#fb7185" : "#a78bfa";
             this.ctx.fillRect(remote.x, remote.y, CONFIG.player.size, CONFIG.player.size);
 
             this.ctx.strokeStyle = "white";
@@ -1121,61 +1379,65 @@ export class Game {
             this.ctx.strokeRect(remote.x, remote.y, CONFIG.player.size, CONFIG.player.size);
 
             this.drawRemotePlayerGun(remote);
-
-            this.ctx.fillStyle = "white";
-            this.ctx.font = "14px Arial";
-            this.ctx.textAlign = "center";
-            this.ctx.fillText(
-                remote.name || "Player",
-                remote.x + CONFIG.player.size / 2,
-                remote.y - 10
-            );
+            this.drawPlayerOverheadInfo(remote);
 
             this.ctx.restore();
         }
     }
 
-    drawRemotePlayerGun(remote) {
-        const size = CONFIG.player.size;
-        const centerY = remote.y + size / 2;
-        const facing = remote.facing === -1 ? -1 : 1;
-        const barrelStartX = facing === 1 ? remote.x + size - 2 : remote.x + 2;
-        const barrelEndX = facing === 1 ? remote.x + size + 19 : remote.x - 19;
-        const gripX = facing === 1 ? remote.x + size - 2 : remote.x + 2;
+    drawLocalPlayerOverheadInfo() {
+        if (!this.isMultiplayer || this.multiplayerDead) {
+            return;
+        }
+
+        this.drawPlayerOverheadInfo({
+            x: this.player.x,
+            y: this.player.y,
+            hp: this.player.hp,
+            maxHp: this.player.maxHp,
+            name: this.multiplayerClient?.playerName || "Player"
+        });
+    }
+
+    drawPlayerOverheadInfo(player) {
+        const centerX = player.x + CONFIG.player.size / 2;
+        const hp = Math.max(0, Math.ceil(Number(player.hp ?? 0)));
+        const maxHp = Math.max(hp, Math.ceil(Number(player.maxHp ?? CONFIG.player.hp)));
 
         this.ctx.save();
-        this.ctx.lineCap = "round";
-        this.ctx.lineJoin = "round";
+        this.ctx.textAlign = "center";
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = "rgba(15, 23, 42, 0.85)";
 
-        this.ctx.strokeStyle = "#111827";
-        this.ctx.lineWidth = 9;
-        this.ctx.beginPath();
-        this.ctx.moveTo(barrelStartX, centerY - 2);
-        this.ctx.lineTo(barrelEndX, centerY - 2);
-        this.ctx.stroke();
+        this.ctx.font = "14px Arial";
+        this.ctx.fillStyle = "white";
+        this.ctx.strokeText(player.name || "Player", centerX, player.y - 24);
+        this.ctx.fillText(player.name || "Player", centerX, player.y - 24);
 
-        this.ctx.strokeStyle = "#f8fafc";
-        this.ctx.lineWidth = 5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(barrelStartX, centerY - 2);
-        this.ctx.lineTo(barrelEndX, centerY - 2);
-        this.ctx.stroke();
+        this.ctx.font = "12px Arial";
+        const hpText = `${hp}/${maxHp}`;
+        this.ctx.strokeText(hpText, centerX, player.y - 8);
+        this.ctx.fillText(hpText, centerX, player.y - 8);
+        this.ctx.restore();
+    }
 
-        this.ctx.strokeStyle = "#111827";
-        this.ctx.lineWidth = 5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(gripX, centerY + 1);
-        this.ctx.lineTo(gripX - facing * 7, centerY + 12);
-        this.ctx.stroke();
+    drawRemotePlayerGun(remote) {
+        const size = CONFIG.player.size;
+        const angle = Number.isFinite(remote.aimAngle)
+            ? remote.aimAngle
+            : remote.facing === -1 ? Math.PI : 0;
+        const cx = remote.x + size / 2;
+        const cy = remote.y + size / 2;
 
-        this.ctx.fillStyle = "#facc15";
-        this.ctx.beginPath();
-        this.ctx.moveTo(barrelEndX + facing * 8, centerY - 2);
-        this.ctx.lineTo(barrelEndX - facing * 1, centerY - 7);
-        this.ctx.lineTo(barrelEndX - facing * 1, centerY + 3);
-        this.ctx.closePath();
-        this.ctx.fill();
-
+        this.ctx.save();
+        this.ctx.translate(cx, cy);
+        drawWeaponModel(
+            this.ctx,
+            size,
+            angle,
+            Boolean(remote.aimFlipY),
+            remote.selectedWeapon || "bullet"
+        );
         this.ctx.restore();
     }
 
@@ -1216,131 +1478,161 @@ export class Game {
     drawUI(timestamp) {
         const selected = this.weaponManager.getSelectedWeapon();
 
-        const hpPercent = Math.max(
-            0,
-            Math.min(
-                100,
-                Math.round((this.player.hp / CONFIG.player.hp) * 100)
-            )
-        );
-
         this.ctx.save();
 
         this.ctx.textBaseline = "middle";
-        this.drawHealthHearts(24, 34, hpPercent);
+        const healthRows = this.drawHealthHearts(24, 34, this.player.hp, this.player.maxHp);
 
-        this.drawSelectedAmmoSlots(selected, 24, 72);
+        const ammoY = 34 + healthRows * 18 + 10;
+        const ammoRows = this.drawSelectedAmmoSlots(selected, 24, ammoY);
+        const hudY = ammoY + Math.max(1, ammoRows) * 18 + 34;
 
         this.ctx.fillStyle = "#facc15";
         this.ctx.font = "18px Arial";
-        this.ctx.fillText(`Score ${this.score}`, 24, 130);
+        this.ctx.fillText(`Score ${this.score}`, 24, hudY);
 
-        this.ctx.fillStyle = "white";
-        this.ctx.font = "16px Arial";
-        this.ctx.fillText(`Weapon: ${selected.name}`, 24, 158);
+        let infoLine = 28;
 
         if (this.freeCamera) {
             this.ctx.fillStyle = "#facc15";
-            this.ctx.fillText("Free Camera", 24, 184);
+            this.ctx.font = "16px Arial";
+            this.ctx.fillText("Free Camera", 24, hudY + infoLine);
+            infoLine += 26;
         }
 
         if (this.isMultiplayer) {
             this.ctx.fillStyle = "#facc15";
             this.ctx.font = "16px Arial";
-            this.ctx.fillText("Multiplayer: commands and monsters disabled", 24, 210);
+            const modeText = this.isCoopMultiplayer ? "Multiplayer: Co-op vs enemies" : "Multiplayer: Brawl";
+            this.ctx.fillText(modeText, 24, hudY + infoLine);
+            infoLine += 26;
 
             if (this.multiplayerDead || this.spectating) {
-                this.ctx.fillText("Spectating · Press Tab to switch target", 24, 236);
+                this.ctx.fillText("Spectating · Press Tab to switch target", 24, hudY + infoLine);
             }
         }
 
         this.ctx.restore();
 
-        if (!this.isMultiplayer) {
+        if (!this.isMultiplayer || this.isCoopMultiplayer) {
             this.drawWaveCenterInfo(timestamp);
         } else {
             this.drawMultiplayerCenterInfo();
         }
     }
 
-    drawHealthHearts(x, y, hpPercent) {
-        const slots = 8;
-        const filledSlots = Math.ceil((hpPercent / 100) * slots);
+    drawHealthHearts(x, y, hp, maxHp = CONFIG.player.hp) {
         const icons = this.terrain.mapData.assets?.iconTextures || {};
+        const totalSlots = Math.max(8, Math.ceil(Math.max(maxHp, hp)));
+        const filledSlots = Math.max(0, Math.ceil(hp));
+        const slotsPerRow = 8;
+        const iconSize = 24;
+        const gapX = 26;
+        const rowStep = 14;
+        const rows = Math.ceil(totalSlots / slotsPerRow);
 
         this.ctx.save();
         this.ctx.textBaseline = "middle";
 
-        for (let i = 0; i < slots; i++) {
-            const textureId = i < filledSlots ? icons.heartFull : icons.heartEmpty;
-            const slotX = x + i * 26;
-            const drawn = drawTexture(this.ctx, this.terrain.mapData, textureId, slotX - 2, y - 13, 24, 24, {
+        for (let i = 0; i < totalSlots; i++) {
+            const row = Math.floor(i / slotsPerRow);
+            const col = i % slotsPerRow;
+            const filled = i < filledSlots;
+            const textureId = filled ? icons.heartFull : icons.heartEmpty;
+            const slotX = x + col * gapX;
+            const slotY = y + row * rowStep;
+
+            drawTexture(this.ctx, this.terrain.mapData, textureId, slotX - 2, slotY - 13, iconSize, iconSize, {
                 fallback: () => {
-                    this.ctx.fillStyle = i < filledSlots ? "#ef4444" : "rgba(239, 68, 68, 0.24)";
+                    this.ctx.fillStyle = filled ? "#ef4444" : "rgba(239, 68, 68, 0.24)";
                     this.ctx.font = "25px Arial";
-                    this.ctx.fillText("♥", slotX, y);
+                    this.ctx.fillText("♥", slotX, slotY);
                 }
             });
-
-            if (!drawn) {
-                continue;
-            }
         }
 
-        this.ctx.fillStyle = "white";
-        this.ctx.font = "18px Arial";
-        this.ctx.fillText(`${hpPercent}%`, x + slots * 26 + 10, y + 1);
         this.ctx.restore();
+        return rows;
     }
 
     drawSelectedAmmoSlots(weapon, x, y) {
-        const slots = 8;
-
         if (!weapon) {
-            return;
+            return 0;
         }
 
-        if (!weapon.unlocked) {
-            this.ctx.save();
-            this.ctx.fillStyle = "#94a3b8";
-            this.ctx.font = "18px Arial";
-            this.ctx.fillText("LOCKED", x, y);
-            this.ctx.restore();
-            return;
-        }
+        const slotsPerRow = 8;
+        const gapX = 26;
+        const rowStep = 14;
+        const infiniteAmmo = Boolean(this.weaponManager.infiniteAmmo);
+        const totalSlots = infiniteAmmo
+            ? slotsPerRow
+            : Math.max(1, Math.floor(weapon.maxAmmo || 0));
+        const filledSlots = infiniteAmmo
+            ? totalSlots
+            : Math.max(0, Math.min(totalSlots, Math.floor(weapon.ammo || 0)));
+        const rows = infiniteAmmo ? 1 : Math.max(1, Math.ceil(totalSlots / slotsPerRow));
 
-        const filledSlots = this.weaponManager.infiniteAmmo
-            ? slots
-            : Math.ceil((weapon.ammo / weapon.maxAmmo) * slots);
-
-        for (let i = 0; i < slots; i++) {
-            const slotX = x + i * 24;
-            const filled = i < filledSlots;
-
-            if (weapon.id === "bullet") {
-                this.drawAmmoBulletSlot(slotX, y, filled);
-            } else if (weapon.id === "shell") {
-                this.drawAmmoShellSlot(slotX + 8, y, filled);
+        if (!weapon.unlocked && !infiniteAmmo) {
+            for (let i = 0; i < totalSlots; i++) {
+                const row = Math.floor(i / slotsPerRow);
+                const col = i % slotsPerRow;
+                const slotX = x + col * gapX;
+                const slotY = y + row * rowStep;
+                this.drawAmmoSlotByWeapon(weapon.id, slotX, slotY, false);
             }
+            return rows;
+        }
+
+        for (let i = 0; i < totalSlots; i++) {
+            const row = Math.floor(i / slotsPerRow);
+            const col = i % slotsPerRow;
+            const slotX = x + col * gapX;
+            const slotY = y + row * rowStep;
+            this.drawAmmoSlotByWeapon(weapon.id, slotX, slotY, i < filledSlots);
+        }
+
+        if (infiniteAmmo) {
+            this.ctx.save();
+            this.ctx.fillStyle = "white";
+            this.ctx.font = "22px Arial";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText("∞", x + slotsPerRow * gapX + 8, y);
+            this.ctx.restore();
+        }
+
+        return rows;
+    }
+
+    drawAmmoSlotByWeapon(weaponId, x, y, filled) {
+        if (weaponId === "bullet") {
+            this.drawAmmoBulletSlot(x, y, filled);
+        } else if (weaponId === "shell") {
+            this.drawAmmoShellSlot(x + 10, y, filled);
+        } else if (weaponId === "lazer") {
+            this.drawAmmoLazerSlot(x, y, filled);
         }
     }
 
     drawAmmoBulletSlot(x, y, filled) {
+        if (!filled) {
+            this.drawAmmoBulletFallback(x, y, false);
+            return;
+        }
+
         const icons = this.terrain.mapData.assets?.iconTextures || {};
         const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoBullet, x, y - 8, 20, 16, {
-            alpha: filled ? 1 : 0.28,
-            fallback: () => this.drawAmmoBulletFallback(x, y, filled)
+            alpha: 1,
+            fallback: () => this.drawAmmoBulletFallback(x, y, true)
         });
 
         if (!drawn) {
-            this.drawAmmoBulletFallback(x, y, filled);
+            this.drawAmmoBulletFallback(x, y, true);
         }
     }
 
     drawAmmoBulletFallback(x, y, filled) {
         this.ctx.save();
-        this.ctx.globalAlpha = filled ? 1 : 0.28;
-        this.ctx.fillStyle = filled ? "#cbd5e1" : "#64748b";
+        this.ctx.globalAlpha = filled ? 1 : 0.55;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - 7);
         this.ctx.lineTo(x + 13, y - 7);
@@ -1348,34 +1640,74 @@ export class Game {
         this.ctx.lineTo(x + 13, y + 7);
         this.ctx.lineTo(x, y + 7);
         this.ctx.closePath();
-        this.ctx.fill();
+        if (filled) {
+            this.ctx.fillStyle = "#cbd5e1";
+            this.ctx.fill();
+        }
         this.ctx.strokeStyle = filled ? "#f8fafc" : "#94a3b8";
-        this.ctx.lineWidth = 1.5;
+        this.ctx.lineWidth = filled ? 1.5 : 2;
         this.ctx.stroke();
         this.ctx.restore();
     }
 
+    drawAmmoLazerSlot(x, y, filled) {
+        this.ctx.save();
+        this.ctx.globalAlpha = filled ? 1 : 0.55;
+        this.ctx.lineCap = "round";
+        if (filled) {
+            this.ctx.strokeStyle = "#38bdf8";
+            this.ctx.lineWidth = 5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 1, y);
+            this.ctx.lineTo(x + 19, y);
+            this.ctx.stroke();
+            this.ctx.strokeStyle = "#e0f2fe";
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 3, y);
+            this.ctx.lineTo(x + 17, y);
+            this.ctx.stroke();
+        } else {
+            this.ctx.strokeStyle = "#94a3b8";
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + 1, y - 3);
+            this.ctx.lineTo(x + 19, y - 3);
+            this.ctx.moveTo(x + 1, y + 3);
+            this.ctx.lineTo(x + 19, y + 3);
+            this.ctx.stroke();
+        }
+        this.ctx.restore();
+    }
+
     drawAmmoShellSlot(x, y, filled) {
+        if (!filled) {
+            this.drawAmmoShellFallback(x, y, false);
+            return;
+        }
+
         const icons = this.terrain.mapData.assets?.iconTextures || {};
         const drawn = drawTexture(this.ctx, this.terrain.mapData, icons.ammoShell, x - 8, y - 8, 16, 16, {
-            alpha: filled ? 1 : 0.28,
-            fallback: () => this.drawAmmoShellFallback(x, y, filled)
+            alpha: 1,
+            fallback: () => this.drawAmmoShellFallback(x, y, true)
         });
 
         if (!drawn) {
-            this.drawAmmoShellFallback(x, y, filled);
+            this.drawAmmoShellFallback(x, y, true);
         }
     }
 
     drawAmmoShellFallback(x, y, filled) {
         this.ctx.save();
-        this.ctx.globalAlpha = filled ? 1 : 0.28;
-        this.ctx.fillStyle = filled ? "#facc15" : "#64748b";
+        this.ctx.globalAlpha = filled ? 1 : 0.55;
         this.ctx.beginPath();
         this.ctx.arc(x, y, 8, 0, Math.PI * 2);
-        this.ctx.fill();
+        if (filled) {
+            this.ctx.fillStyle = "#facc15";
+            this.ctx.fill();
+        }
         this.ctx.strokeStyle = filled ? "#fef3c7" : "#94a3b8";
-        this.ctx.lineWidth = 1.5;
+        this.ctx.lineWidth = filled ? 1.5 : 2;
         this.ctx.stroke();
         this.ctx.restore();
     }

@@ -41,6 +41,7 @@ const startSinglePlayerButton = document.getElementById("startSinglePlayerButton
 const backFromSingleMenuButton = document.getElementById("backFromSingleMenuButton");
 
 const createPlayerNameInput = document.getElementById("createPlayerNameInput");
+const createGameTypeSelect = document.getElementById("createGameTypeSelect");
 const createMapSelect = document.getElementById("createMapSelect");
 const createMapInput = document.getElementById("createMapInput");
 const chooseCreateMapFileButton = document.getElementById("chooseCreateMapFileButton");
@@ -158,6 +159,7 @@ startSinglePlayerButton.addEventListener("click", async () => {
 
 createRoomButton.addEventListener("click", async () => {
     const playerName = createPlayerNameInput.value.trim() || "Player";
+    const gameType = createGameTypeSelect?.value || "coop";
     const mapData = await resolveSelectedMap(createMapSelect, createUploadedMap, createMapStatus);
 
     if (!mapData) {
@@ -176,6 +178,7 @@ createRoomButton.addEventListener("click", async () => {
         playerName,
         isHost: true,
         mapData,
+        gameType,
         onReady: (serverMap) => {
             createRoomButton.disabled = false;
             createMapStatus.textContent = "房间已创建。";
@@ -477,7 +480,8 @@ function startMultiplayerGame(mapData, client) {
 
     game = new Game(canvas, playableMap, settings, {
         mode: "multiplayer",
-        multiplayerClient: client
+        multiplayerClient: client,
+        multiplayerType: client.gameType || "brawl"
     });
 
     game.start();

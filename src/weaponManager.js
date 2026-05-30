@@ -11,8 +11,6 @@ export class WeaponManager {
                 unlocked: true,
                 ammo: CONFIG.bullet.maxAmmo,
                 maxAmmo: CONFIG.bullet.maxAmmo,
-                regenInterval: CONFIG.bullet.regenInterval,
-                lastRegenTime: 0,
                 cooldown: CONFIG.bullet.cooldown,
                 lastFireTime: -Infinity
             },
@@ -23,46 +21,39 @@ export class WeaponManager {
                 unlocked: false,
                 ammo: 0,
                 maxAmmo: CONFIG.shell.maxAmmo,
-                regenInterval: CONFIG.shell.regenInterval,
-                lastRegenTime: 0,
                 cooldown: CONFIG.shell.cooldown,
+                lastFireTime: -Infinity
+            },
+
+            lazer: {
+                id: "lazer",
+                name: "Lazer",
+                unlocked: false,
+                ammo: 0,
+                maxAmmo: CONFIG.lazer.maxAmmo,
+                cooldown: CONFIG.lazer.cooldown,
                 lastFireTime: -Infinity
             }
         };
 
-        this.autoAmmo = true;
+        this.autoAmmo = false;
         this.speedshot = false;
         this.infiniteAmmo = false;
     }
 
     update(timestamp) {
-        this.regenerateAmmo(timestamp);
-    }
-
-    regenerateAmmo(timestamp) {
-        if (this.infiniteAmmo) {
-            this.weapons.bullet.ammo = this.weapons.bullet.maxAmmo;
-
-            if (this.weapons.shell.unlocked) {
-                this.weapons.shell.ammo = this.weapons.shell.maxAmmo;
-            }
-
+        if (!this.infiniteAmmo) {
             return;
         }
 
-        for (const weapon of Object.values(this.weapons)) {
-            if (!weapon.unlocked) {
-                continue;
-            }
+        this.weapons.bullet.ammo = this.weapons.bullet.maxAmmo;
 
-            if (weapon.ammo >= weapon.maxAmmo) {
-                continue;
-            }
+        if (this.weapons.shell.unlocked) {
+            this.weapons.shell.ammo = this.weapons.shell.maxAmmo;
+        }
 
-            if (timestamp - weapon.lastRegenTime >= weapon.regenInterval) {
-                weapon.ammo++;
-                weapon.lastRegenTime = timestamp;
-            }
+        if (this.weapons.lazer.unlocked) {
+            this.weapons.lazer.ammo = this.weapons.lazer.maxAmmo;
         }
     }
 
@@ -74,6 +65,11 @@ export class WeaponManager {
 
         if (numberKey === "2" && this.weapons.shell.unlocked) {
             this.selectedWeapon = "shell";
+            return;
+        }
+
+        if (numberKey === "3" && this.weapons.lazer.unlocked) {
+            this.selectedWeapon = "lazer";
         }
     }
 
@@ -85,14 +81,33 @@ export class WeaponManager {
         }
 
         weapon.unlocked = true;
-
-        if (weapon.ammo <= 0) {
-            weapon.ammo = Math.ceil(weapon.maxAmmo / 2);
-        }
+        weapon.ammo = weapon.maxAmmo;
 
         this.selectedWeapon = type;
 
         return true;
+    }
+
+    unlockAllWeapons({ fullAmmo = true, select = null } = {}) {
+        for (const weapon of Object.values(this.weapons)) {
+            weapon.unlocked = true;
+
+            if (fullAmmo) {
+                weapon.ammo = weapon.maxAmmo;
+            }
+        }
+
+        if (select && this.weapons[select]) {
+            this.selectedWeapon = select;
+        }
+    }
+
+    setInfiniteAmmo(enabled) {
+        this.infiniteAmmo = Boolean(enabled);
+
+        if (this.infiniteAmmo) {
+            this.update(performance.now());
+        }
     }
 
     addAmmo(type, amount) {

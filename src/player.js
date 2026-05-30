@@ -21,7 +21,10 @@ export class Player {
         this.vy = 0;
 
         this.facing = 1;
-        this.hp = CONFIG.player.hp;
+        this.aimAngle = 0;
+        this.aimFlipY = false;
+        this.maxHp = CONFIG.player.hp;
+        this.hp = this.maxHp;
 
         this.onGround = false;
 
@@ -111,16 +114,20 @@ export class Player {
         this.jumpCount++;
     }
 
-    takeDamage(amount) {
-        if (this.damageCooldown > 0) {
-            return;
+    takeDamage(amount, options = {}) {
+        const useCooldown = options.useCooldown === true;
+
+        if (useCooldown && this.damageCooldown > 0) {
+            return false;
         }
 
-        this.hp -= amount;
+        const damage = Math.max(1, Math.ceil(Number(amount) || 1));
+        this.hp -= damage;
         this.damageCooldown = 28;
+        return true;
     }
 
-    draw(ctx) {
+    draw(ctx, weaponId = "bullet") {
         ctx.fillStyle = this.damageCooldown > 0 ? "#fb7185" : "#22d3ee";
         ctx.fillRect(this.x, this.y, this.size, this.size);
 
@@ -128,48 +135,95 @@ export class Player {
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.size, this.size);
 
-        this.drawGun(ctx, this.x, this.y, this.facing);
+        this.drawWeapon(ctx, this.x, this.y, this.facing, weaponId);
     }
 
-    drawGun(ctx, x, y, facing) {
-        const centerY = y + this.size / 2;
-        const gripX = facing === 1 ? x + this.size - 2 : x + 2;
-        const barrelStartX = facing === 1 ? x + this.size - 2 : x + 2;
-        const barrelEndX = facing === 1 ? x + this.size + 19 : x - 19;
+    drawWeapon(ctx, x, y, facing, weaponId) {
+        const angle = Number.isFinite(this.aimAngle)
+            ? this.aimAngle
+            : facing === 1 ? 0 : Math.PI;
+        const cx = x + this.size / 2;
+        const cy = y + this.size / 2;
 
         ctx.save();
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
-        ctx.strokeStyle = "#111827";
-        ctx.lineWidth = 9;
-        ctx.beginPath();
-        ctx.moveTo(barrelStartX, centerY - 2);
-        ctx.lineTo(barrelEndX, centerY - 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#f8fafc";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(barrelStartX, centerY - 2);
-        ctx.lineTo(barrelEndX, centerY - 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#111827";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(gripX, centerY + 1);
-        ctx.lineTo(gripX - facing * 7, centerY + 12);
-        ctx.stroke();
-
-        ctx.fillStyle = "#facc15";
-        ctx.beginPath();
-        ctx.moveTo(barrelEndX + facing * 8, centerY - 2);
-        ctx.lineTo(barrelEndX - facing * 1, centerY - 7);
-        ctx.lineTo(barrelEndX - facing * 1, centerY + 3);
-        ctx.closePath();
-        ctx.fill();
-
+        ctx.translate(cx, cy);
+        drawWeaponModel(ctx, this.size, angle, this.aimFlipY, weaponId);
         ctx.restore();
     }
+}
+
+export function drawWeaponModel(ctx, playerSize, angle, flipY = false, weaponId = "bullet") {
+    ctx.rotate(angle);
+
+    if (flipY) {
+        ctx.scale(1, -1);
+    }
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    if (weaponId === "shell") {
+        ctx.fillStyle = "#1f2937";
+        ctx.fillRect(0, -8, 31, 15);
+
+        ctx.fillStyle = "#64748b";
+        ctx.fillRect(5, -11, 22, 21);
+
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(5, -11, 22, 21);
+
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath();
+        ctx.arc(35, 0, 5, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+    }
+
+    if (weaponId === "lazer") {
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(1, -5, 34, 10);
+
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(7, 0);
+        ctx.lineTo(35, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = "#e0f2fe";
+        ctx.beginPath();
+        ctx.arc(38, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+        return;
+    }
+
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(2, -2);
+    ctx.lineTo(28, -2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#f8fafc";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(2, -2);
+    ctx.lineTo(28, -2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(4, 1);
+    ctx.lineTo(-2, 13);
+    ctx.stroke();
+
+    ctx.fillStyle = "#facc15";
+    ctx.beginPath();
+    ctx.moveTo(37, -2);
+    ctx.lineTo(28, -7);
+    ctx.lineTo(28, 3);
+    ctx.closePath();
+    ctx.fill();
 }

@@ -1,103 +1,222 @@
-# Cube Shoot! Ground Battle
+# Cube Shoot!
 
-A browser-based 2D ground battle shooting game with a start menu and a built-in map editor.
+Cube Shoot! 是一个基于 HTML5 Canvas 的 2D 波次生存射击游戏，玩法参考 DDRaceNetwork 的 Monster 模式。玩家控制方块角色在地图中移动、跳跃、拾取武器和弹药，使用子弹、炮弹和 Lazer 对抗敌人或与其他玩家乱斗。项目使用 AI 辅助编写与迭代。
 
-## Controls
+## 主要功能
 
-### Game
+- 单人波次生存模式。
+- 多人联机房间系统。
+- 多人模式可选择 `打敌人` 或 `乱斗`。
+- 内置地图选择，也支持上传自定义地图。
+- 内置地图编辑器，支持导入、导出、保存和试玩。
+- 支持自定义地面贴图、背景贴图和 HUD/道具图标。
+- 支持本地设置保存，包括按键、背景季节和碰撞体积显示。
+- 武器、弹药、生命、敌人、Boss、拾取物和地图均为模块化代码结构。
 
-- `A` / `D` or Arrow Keys: Move left and right
-- `Space`: Jump / double jump
-- `E`: Fire selected weapon
-- `1`: Select bullet
-- `2`: Select cannon shell after unlocked
-- `Q`: Toggle free camera
-- `T`: Open command input
+## 游戏模式
 
-### Map Editor
+### 单人游戏
 
-- `WASD` / Arrow Keys: Move editor camera
-- Mouse wheel: Zoom
-- Left click: Place selected object
-- Right click: Erase block / spawn / pickup
-- Middle mouse drag: Pan camera
+单人游戏以波次生存为核心。玩家击败敌人获得分数，波次会逐步推进，并在特定波次出现 Boss。地图中可以放置子弹弹药、炮弹武器、炮弹弹药、Lazer 武器和回血道具。
 
-## New Structure
+### 多人：打敌人
+
+多人合作模式。房主创建房间并选择地图，其他玩家通过房间号加入。该模式启用敌人与波次，玩家共同对抗敌人。
+
+### 多人：乱斗
+
+多人对战模式。玩家之间可以互相攻击。该模式默认解锁 Bullet、Cannon / Shell 和 Lazer，生命值为基础生命值的 3 倍，并启用无限弹药。玩家对玩家伤害为：Bullet 1 格、Shell 4 格、Lazer 2 格。玩家死亡后视角会转向存活玩家；若剩余多名玩家，可以切换观察视角。游戏结束后显示排行榜，并由房主控制重新开始。
+
+## 操作方式
+
+默认按键如下，可以在设置菜单中修改。
+
+| 操作 | 默认按键 |
+| --- | --- |
+| 左移 | `A` / `←` |
+| 右移 | `D` / `→` |
+| 跳跃 / 二段跳 | `Space` |
+| 开火 | `E` |
+| 切换子弹武器 | `1` |
+| 切换炮弹武器 | `2` |
+| 切换 Lazer 武器 | `3` |
+| 打开聊天 / 指令输入 | `T` |
+| 自由镜头 | `Q` |
+
+武器发射方向由“玩家中心点 → 鼠标位置”的直线决定。子弹沿该方向直线飞行，炮弹沿该方向获得初速度并受重力影响形成抛物线，Lazer 可在接触地形后多次反射。
+
+## 武器与弹药
+
+| 武器 | 获取方式 | 弹药上限 | 说明 |
+| --- | --- | ---: | --- |
+| Bullet | 默认拥有 | 16 | 基础直线射击武器 |
+| Cannon / Shell | 地图拾取或指令解锁 | 8 | 发射受重力影响的炮弹，爆炸造成范围伤害 |
+| Lazer | 地图拾取或指令解锁 | 24 | 发射可反射的激光 |
+
+弹药不会自动回复。拾取武器时，该武器会直接补满弹药。弹药需要通过地图拾取、武器拾取或指令获得。HUD 中弹药以图标显示，一个图标代表一发弹药，每 8 个图标换一行，并与生命值图标对齐。多人乱斗模式会强制启用无限弹药；无限弹药时只显示一行对应当前武器类型的弹药图标，并在右侧显示 `∞`。
+
+## 生命值显示
+
+玩家生命值使用图标显示，不再显示数值。一个心形图标代表一格生命。基础生命值为 8 格；通过 `/health <value>` 可以增加生命值上限。超过 8 格时，每 8 格换一行，下一行会向上叠加到上一行，形成紧凑的堆叠显示。
+
+## 指令
+
+指令只在单人游戏中可用。多人游戏中指令会被禁用。
+
+| 指令 | 效果 | 消耗分数 |
+| --- | --- | ---: |
+| `/help` | 显示指令帮助 | 0 |
+| `/health <value>` | 增加指定格数生命值上限，并补充对应格数当前生命 | 每 1 格 25 分 |
+| `/weapon shell` | 解锁炮弹武器并补满炮弹 | 300 |
+| `/weapon lazer` | 解锁 Lazer 武器并补满 Lazer 弹药 | 450 |
+| `/speedshot` | 开关更快射击 | 700 |
+| `/infiniteammo` | 开关无限弹药 | 500 |
+| `/autoammo` | 已禁用，会提示从地图拾取弹药 | 0 |
+
+## 地图编辑器
+
+地图编辑器支持创建自定义地图，并可导出为 JSON 或 JavaScript 模块。
+
+主要功能包括：
+
+- 两次左键点击创建矩形地形。
+- 点击已创建的地形并按 `Delete` 删除。
+- 放置单人玩家出生点。
+- 切换单人 Monster 生成点与多人玩家生成点设置。
+- 放置普通敌人生成点与 Boss 生成点。
+- 放置子弹弹药、炮弹武器、炮弹弹药、Lazer 武器和回血道具。
+- 放置背景云、栅栏、灯笼、水滴石锥和自定义背景贴图。
+- 添加自定义地面贴图和背景贴图。
+- 为回血、弹药、武器和 HUD 图标槽设置自定义贴图。
+- 本地保存、读取、清空、导入、导出和试玩。
+
+地图中的怪物生成点在正常游戏中不会显示。多人玩家生成点只用于多人游戏，单人 Monster 生成点只用于单人/合作打怪逻辑。
+
+## 内置地图
+
+项目内置以下地图：
+
+- Default Map
+- Training Yard
+- Stone Bridges
+- Sky Islands
+- Canyon Steps
+- Fort Arena
+
+地图文件位于：
 
 ```text
-CubeShoot_MapEditor/
-├── index.html
-├── style.css
-├── README.md
-└── src/
-    ├── main.js
-    ├── mapEditor.js
-    ├── config.js
-    ├── game.js
-    ├── input.js
-    ├── player.js
-    ├── enemy.js
-    ├── projectile.js
-    ├── effects.js
-    ├── collision.js
-    ├── terrain.js
-    ├── waveManager.js
-    ├── weaponManager.js
-    └── maps/
-        └── defaultMap.js
+src/maps/
 ```
 
-## Map Editor Features
+## 运行方式
 
-- Terrain block placement with selectable type, width, and height.
-- Player start placement.
-- Normal enemy spawn placement.
-- Boss spawn placement.
-- Shell weapon pickup placement.
-- Shell ammo and bullet ammo pickup placement.
-- Right-click erase.
-- Local browser save through `localStorage`.
-- JSON export/import.
-- JavaScript module export.
-- Direct play test using the edited map.
+由于项目使用 ES Modules，不能直接双击 `index.html` 打开。需要通过本地服务器运行。
 
-## How to Run
+### 方式一：使用 Node.js 服务器
 
-Because this project uses JavaScript modules, open it through a local server.
-
-### VS Code Live Server
-
-1. Install the Live Server extension.
-2. Open this project folder in VS Code.
-3. Right-click `index.html`.
-4. Select `Open with Live Server`.
-
-### Python local server
+安装依赖：
 
 ```bash
-cd CubeShoot_MapEditor
+npm install
+```
+
+启动服务器：
+
+```bash
+npm start
+```
+
+然后在浏览器中打开服务器输出的地址。该方式适合单人游戏、地图编辑器和多人联机测试。
+
+### 方式二：使用 Python 本地服务器
+
+```bash
 python3 -m http.server 8000
 ```
 
-Open:
+然后打开：
 
 ```text
 http://localhost:8000
 ```
 
+该方式适合单人游戏和地图编辑器。如果需要跨设备多人联机，建议使用 Node.js 服务器。
 
-## Map Editor Update
+### 方式三：使用 VS Code Live Server
 
-The map editor now creates terrain rectangles with a two-click workflow:
+1. 用 VS Code 打开项目文件夹。
+2. 安装 Live Server 扩展。
+3. 右键 `index.html`。
+4. 选择 `Open with Live Server`。
 
-1. Select `Terrain Block`.
-2. Left click the rectangle start point.
-3. Left click the rectangle end point.
-4. Click an existing rectangle to select it.
-5. Press `Delete` to remove the selected rectangle.
+## 多人联机说明
 
-Available terrain materials include grass blocks, dirt blocks, stone bricks, dark framed solid blocks, blue framed solid blocks, green framed solid blocks, End Stone, Dark End Stone, and Chorus blocks.
+项目包含 WebSocket 服务器代码：
 
-Grass blocks are drawn without internal borders so adjacent grass rectangles visually connect. Terrain and pickups use slightly rounded corners. The editor also supports background-only objects: clouds, fences, lanterns, and dripstone. These do not affect collision.
+```text
+server/server.js
+```
 
-The menu and game background support four seasonal styles: spring, summer, autumn, and winter.
+多人模式需要先运行服务器，再从浏览器进入游戏页面。创建房间后会生成房间号，其他玩家输入房间号即可加入。局域网或跨设备测试时，需要保证其他设备能够访问运行服务器的主机地址和端口。
+
+## 项目结构
+
+```text
+Cube Shoot!/
+├── index.html              # 页面结构和菜单
+├── style.css               # 页面与菜单样式
+├── package.json            # Node.js 依赖和启动脚本
+├── server/
+│   └── server.js           # WebSocket 多人服务器
+├── src/
+│   ├── main.js             # 菜单、模式切换和入口逻辑
+│   ├── game.js             # 游戏主循环、HUD、指令、拾取物和模式逻辑
+│   ├── player.js           # 玩家移动、绘制、武器模型渲染
+│   ├── enemy.js            # 敌人和 Boss 行为逻辑
+│   ├── projectile.js       # 子弹、炮弹、Lazer 逻辑
+│   ├── weaponManager.js    # 武器解锁、弹药、冷却和切换
+│   ├── waveManager.js      # 波次生成和进度管理
+│   ├── mapEditor.js        # 地图编辑器
+│   ├── multiplayer.js      # 多人客户端同步逻辑
+│   ├── terrain.js          # 地形、拾取物和背景物绘制
+│   ├── textureManager.js   # 自定义贴图和图标管理
+│   ├── settings.js         # 本地设置与按键绑定
+│   ├── input.js            # 输入处理
+│   ├── collision.js        # 碰撞检测
+│   ├── camera.js           # 镜头逻辑
+│   ├── effects.js          # 粒子与视觉效果
+│   ├── config.js           # 游戏参数配置
+│   └── maps/               # 内置地图
+└── README.md
+```
+
+## 常用参数位置
+
+主要参数集中在：
+
+```text
+src/config.js
+```
+
+可以在这里调整：
+
+- 玩家大小、速度、跳跃力和基础生命值。
+- 子弹、炮弹和 Lazer 的伤害、速度、冷却、弹药上限。
+- Lazer 生命周期和最大反射次数。
+- 敌人基础速度。
+- Boss 大小、速度、初始血量、每波额外血量和炮弹伤害倍率。
+
+## 开发备注
+
+- 弹药回复逻辑已关闭，弹药主要依赖拾取物和指令。
+- Shell 与 Lazer 默认未解锁，需要通过地图拾取或指令获得。
+- 武器模型会随当前武器切换，不再固定显示手枪。
+- 地图作者可以通过地图编辑器给地形、背景、道具和 HUD 图标替换贴图。
+- 多人游戏中的远程玩家会同步位置、瞄准方向、当前武器和发射物。
+
+## License
+
+Copyright (c) 2026 Caerulues
+
+This project is licensed under the MIT License.

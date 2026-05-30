@@ -62,6 +62,14 @@
         </label>
 
         <label>
+            多人模式
+            <select id="createGameTypeSelect">
+                <option value="coop">打敌人</option>
+                <option value="brawl">乱斗</option>
+            </select>
+        </label>
+
+        <label>
             地图
             <select id="createMapSelect">
                 <option value="default">默认地图</option>
@@ -130,6 +138,7 @@
             <button class="keybindButton" data-action="freeCamera">Free Camera</button>
             <button class="keybindButton" data-action="weapon1">Weapon 1</button>
             <button class="keybindButton" data-action="weapon2">Weapon 2</button>
+            <button class="keybindButton" data-action="weapon3">Weapon 3</button>
         </div>
 
         <label class="checkbox-row">
@@ -164,6 +173,7 @@
                     <option value="spawn_boss">Boss 生成点</option>
                     <option value="player_spawn_multiplayer">多人玩家生成点</option>
                     <option value="pickup_shell_weapon">炮弹武器拾取</option>
+                    <option value="pickup_lazer_weapon">Lazer武器拾取</option>
                     <option value="pickup_shell_ammo">炮弹弹药拾取</option>
                     <option value="pickup_bullet_ammo">子弹弹药拾取</option>
                     <option value="pickup_health">回血道具拾取</option>
@@ -203,6 +213,7 @@
                     <option value="pickupBulletAmmo">子弹道具</option>
                     <option value="pickupShellAmmo">炮弹道具</option>
                     <option value="pickupShellWeapon">炮弹枪道具</option>
+                    <option value="pickupLazerWeapon">Lazer枪道具</option>
                     <option value="heartFull">实心血量</option>
                     <option value="heartEmpty">空心血量</option>
                     <option value="ammoBullet">HUD 子弹</option>

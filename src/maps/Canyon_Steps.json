@@ -273,6 +273,21 @@
             "type": "health",
             "enabled": true,
             "amount": 30
+        },
+        {
+            "id": "pickup_lazer_weapon_auto",
+            "x": 1720,
+            "y": 500,
+            "width": 28,
+            "height": 28,
+            "type": "weapon",
+            "weapon": "lazer",
+            "enabled": true
         }
-    ]
+    ],
+    "assets": {
+        "iconTextures": {
+            "pickupLazerWeapon": "pickup_lazer_weapon"
+        }
+    }
 }

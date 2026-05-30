@@ -676,6 +676,16 @@
             "amount": 30,
             "enabled": true,
             "textureId": ""
+        },
+        {
+            "id": "pickup_lazer_weapon_auto",
+            "x": 1020,
+            "y": 340,
+            "width": 28,
+            "height": 28,
+            "type": "weapon",
+            "weapon": "lazer",
+            "enabled": true
         }
     ],
     "playerSpawnPoints": [
@@ -797,7 +807,8 @@
             "pickupHealth": "pickup_health",
             "pickupBulletAmmo": "pickup_bullet_ammo",
             "pickupShellAmmo": "pickup_shell_ammo",
-            "pickupShellWeapon": "pickup_shell_weapon"
+            "pickupShellWeapon": "pickup_shell_weapon",
+            "pickupLazerWeapon": "pickup_lazer_weapon"
         }
     }
 }
