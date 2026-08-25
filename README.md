@@ -5,7 +5,7 @@ Cube Shoot! 是一个基于 HTML5 Canvas 的 2D 波次生存射击游戏，玩�
 ## 主要功能
 
 - 单人波次生存模式。
-- 多人联机房间系统。
+- 多人联机房间。
 - 多人模式可选择 `打敌人` 或 `乱斗`。
 - 内置地图选择，也支持上传自定义地图。
 - 内置地图编辑器，支持导入、导出、保存和试玩。
@@ -218,5 +218,3 @@ src/config.js
 ## License
 
 Copyright (c) 2026 Caerulues
-
-This project is licensed under the MIT License.
